@@ -1,0 +1,70 @@
+package httpapi
+
+import "time"
+
+type errorEnvelope struct {
+	Error errorDetail `json:"error"`
+}
+
+type errorDetail struct {
+	Message string `json:"message"`
+}
+
+type profileDTO struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+	Region      string `json:"region"`
+}
+
+type profilesResponse struct {
+	RefreshIntervalSeconds int          `json:"refreshIntervalSeconds"`
+	Profiles               []profileDTO `json:"profiles"`
+}
+
+type jobListItemDTO struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	SubmitTime time.Time `json:"submitTime"`
+}
+
+type jobsResponse struct {
+	Jobs []jobListItemDTO `json:"jobs"`
+}
+
+type jobDTO struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+type versionGroupDTO struct {
+	Version                       uint64         `json:"version"`
+	NewestAllocationUptimeSeconds int64          `json:"newestAllocationUptimeSeconds"`
+	StatusCounts                  map[string]int `json:"statusCounts"`
+}
+
+type portDTO struct {
+	Label   string `json:"label"`
+	IP      string `json:"ip"`
+	Port    int    `json:"port"`
+	URL     string `json:"url"`
+	NodeURL string `json:"nodeUrl,omitempty"`
+}
+
+type allocationDTO struct {
+	ID            string    `json:"id"`
+	NodeName      string    `json:"nodeName"`
+	NodeIP        string    `json:"nodeIp"`
+	ClientStatus  string    `json:"clientStatus"`
+	DesiredStatus string    `json:"desiredStatus"`
+	TaskGroup     string    `json:"taskGroup"`
+	Version       uint64    `json:"version"`
+	UptimeSeconds int64     `json:"uptimeSeconds"`
+	Ports         []portDTO `json:"ports"`
+}
+
+type jobStatusResponse struct {
+	Job           jobDTO            `json:"job"`
+	VersionGroups []versionGroupDTO `json:"versionGroups"`
+	Allocations   []allocationDTO   `json:"allocations"`
+}
