@@ -1,0 +1,93 @@
+/* Gruvbox light palette (faded accent set — Gruvbox's own recommendation for
+   light backgrounds). See https://github.com/morhetz/gruvbox and specs/style.md. */
+:root {
+  --gb-bg0: #fbf1c7;
+  --gb-bg1: #ebdbb2;
+  --gb-bg2: #d5c4a1;
+  --gb-bg3: #bdae93;
+
+  --gb-fg0: #282828;
+  --gb-fg1: #3c3836;
+  --gb-fg2: #504945;
+  --gb-gray: #928374;
+
+  --gb-red: #9d0006;
+  --gb-green: #79740e;
+  --gb-yellow: #b57614;
+  --gb-blue: #076678;
+  --gb-purple: #8f3f71;
+  --gb-aqua: #427b58;
+  --gb-orange: #af3a03;
+}
+
+@font-face {
+  font-family: 'AnonymicePro Nerd Font Mono';
+  src: url('/fonts/AnonymiceProNerdFontMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AnonymicePro Nerd Font Mono';
+  src: url('/fonts/AnonymiceProNerdFontMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Kefa is an Apple system font (macOS/iOS), referenced by name rather than
+     bundled since it isn't freely redistributable — renders as Kefa on
+     Apple devices, falls back gracefully elsewhere. */
+  --font-text: Kefa, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'AnonymicePro Nerd Font Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--gb-bg0);
+  color: var(--gb-fg1);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--gb-fg0);
+  font-weight: 600;
+}
+
+a {
+  color: var(--gb-blue);
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+code,
+.mono {
+  font-family: var(--font-mono);
+}
+
+table {
+  border-collapse: collapse;
+}

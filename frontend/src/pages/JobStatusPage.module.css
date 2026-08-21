@@ -1,0 +1,96 @@
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.versionGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.versionGroup {
+  background: var(--gb-bg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.versionHeader {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--gb-fg0);
+  margin-bottom: 0.5rem;
+}
+
+.uptime {
+  font-weight: 400;
+  color: var(--gb-fg2);
+  font-family: var(--font-mono);
+}
+
+.statusCounts {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.statusCount {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+}
+
+.table {
+  width: 100%;
+  border: 1px solid var(--gb-bg3);
+  border-radius: 6px;
+  overflow: hidden;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--gb-bg2);
+  vertical-align: top;
+}
+
+.table th {
+  background: var(--gb-bg1);
+  color: var(--gb-fg2);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.nodeIp {
+  color: var(--gb-fg2);
+  font-size: 0.85rem;
+}
+
+.ports {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.port {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.portLabel {
+  color: var(--gb-fg2);
+  font-weight: 600;
+}

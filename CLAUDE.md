@@ -6,13 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `unhoused` is a web UI tool written in Go for monitoring HashiCorp Nomad job and allocation status.
 
-## Status
-
-This repository is currently an empty scaffold — no source files exist yet. The sections below are starting
-points based on standard Go conventions and the Nomad API; update them as soon as real structure, tooling,
-and architecture decisions are in place.
-
 ## Commands
+
+### Backend (Go, repo root)
 
 - Build: `go build ./...`
 - Run: `go run . -c <config-file>` (see [specs/configuration.md](specs/configuration.md); `config.example.yaml` is a starting point)
@@ -22,6 +18,14 @@ and architecture decisions are in place.
 - Format: `gofmt -l .` (list) / `go fmt ./...` (apply)
 - Lint: `make lint` — installs golangci-lint into `./bin` (scoped to this repo, not system-wide) if not
   already present, then runs `golangci-lint run ./...`
+
+### Frontend (React, `frontend/`)
+
+- Install: `cd frontend && npm install`
+- Dev server: `npm run dev` (proxies `/api` to `http://localhost:3001`, the backend's default port — run
+  the backend alongside it)
+- Build: `npm run build` (`tsc -b && vite build`)
+- Lint: `npm run lint` (oxlint)
 
 ## Architecture
 

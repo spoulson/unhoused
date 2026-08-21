@@ -1,0 +1,36 @@
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--gb-bg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 6px;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  border-color: var(--gb-blue);
+}
+
+.name {
+  font-weight: 700;
+  color: var(--gb-fg0);
+  font-family: var(--font-mono);
+}
+
+.meta {
+  color: var(--gb-fg2);
+  font-size: 0.9rem;
+  text-transform: capitalize;
+}

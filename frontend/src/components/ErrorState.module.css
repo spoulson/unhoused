@@ -1,0 +1,4 @@
+.error {
+  color: var(--gb-red);
+  font-weight: 600;
+}

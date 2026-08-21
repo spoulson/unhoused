@@ -1,0 +1,39 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: var(--gb-bg1);
+  border-bottom: 1px solid var(--gb-bg3);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gb-fg0);
+  text-decoration: none;
+}
+
+.breadcrumb {
+  color: var(--gb-fg2);
+  font-size: 0.9rem;
+}
+
+.breadcrumb a {
+  color: var(--gb-blue);
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}

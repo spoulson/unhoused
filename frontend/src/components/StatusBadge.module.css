@@ -1,0 +1,33 @@
+.badge {
+  display: inline-block;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--gb-bg0);
+  text-transform: capitalize;
+}
+
+.green {
+  background: var(--gb-green);
+}
+
+.yellow {
+  background: var(--gb-yellow);
+}
+
+.gray {
+  background: var(--gb-gray);
+}
+
+.red {
+  background: var(--gb-red);
+}
+
+.aqua {
+  background: var(--gb-aqua);
+}
+
+.orange {
+  background: var(--gb-orange);
+}

@@ -1,0 +1,35 @@
+.table {
+  width: 100%;
+  margin-top: 1rem;
+  border: 1px solid var(--gb-bg3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--gb-bg2);
+}
+
+.table th {
+  background: var(--gb-bg1);
+  color: var(--gb-fg2);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--gb-bg1);
+}
+
+.table a {
+  text-decoration: none;
+  font-weight: 600;
+}
