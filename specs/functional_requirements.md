@@ -37,6 +37,9 @@ fields:
         - `us-west1` -> `usw1`
         - `europe-west1` -> `euw1`
         - `ause1` -> `ause1`
+- Allow selectable filters on the table data:
+  - On fields "task group", "version", and "node" from existing values.
+  - On fields "status" and "desired" from possible valid values.
 - Page updates periodically based on configuration.
   - Default every 5 seconds.
 
