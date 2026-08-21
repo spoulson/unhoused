@@ -27,6 +27,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build: `npm run build` (`tsc -b && vite build`)
 - Lint: `npm run lint` (oxlint)
 
+### Full stack (Docker)
+
+- `docker compose up --build` — builds and runs backend, frontend, and a Caddy reverse proxy together (see
+  [specs/architecture.md](specs/architecture.md)'s Docker Test Environment section). Open
+  `http://localhost:8080` in a browser once it's up.
+- `docker compose down` — stop and remove the containers.
+
 ## Architecture
 
 See [specs/architecture.md](specs/architecture.md).

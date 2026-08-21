@@ -1,0 +1,22 @@
+services:
+  backend:
+    build: .
+    volumes:
+      - ./config.yaml:/etc/unhoused/config.yaml:ro
+    expose:
+      - "3001"
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+      - frontend
