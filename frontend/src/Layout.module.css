@@ -14,10 +14,18 @@
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--gb-fg0);
   text-decoration: none;
+}
+
+.logo {
+  height: 6rem;
+  width: 6rem;
 }
 
 .breadcrumb {

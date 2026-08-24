@@ -3,8 +3,10 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func writeConfigFile(t *testing.T, contents string) string {
@@ -12,9 +14,7 @@ func writeConfigFile(t *testing.T, contents string) string {
 
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	err := os.WriteFile(path, []byte(contents), 0o600)
-	if err != nil {
-		t.Fatalf("writing test config file: %v", err)
-	}
+	require.NoError(t, err, "writing test config file")
 
 	return path
 }
@@ -30,19 +30,11 @@ profiles:
 `)
 
 	cfg, err := Load(path)
-	if err != nil {
-		t.Fatalf("Load returned error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if cfg.HTTPPublicURL != defaultHTTPPublicURL {
-		t.Errorf("HTTPPublicURL = %q, want %q", cfg.HTTPPublicURL, defaultHTTPPublicURL)
-	}
-	if cfg.ListenPort != defaultListenPort {
-		t.Errorf("ListenPort = %d, want %d", cfg.ListenPort, defaultListenPort)
-	}
-	if cfg.RefreshIntervalSeconds != defaultRefreshIntervalSeconds {
-		t.Errorf("RefreshIntervalSeconds = %d, want %d", cfg.RefreshIntervalSeconds, defaultRefreshIntervalSeconds)
-	}
+	assert.Equal(t, defaultHTTPPublicURL, cfg.HTTPPublicURL)
+	assert.Equal(t, defaultListenPort, cfg.ListenPort)
+	assert.Equal(t, defaultRefreshIntervalSeconds, cfg.RefreshIntervalSeconds)
 }
 
 func TestLoadHonorsExplicitValues(t *testing.T) {
@@ -59,19 +51,11 @@ profiles:
 `)
 
 	cfg, err := Load(path)
-	if err != nil {
-		t.Fatalf("Load returned error: %v", err)
-	}
+	require.NoError(t, err)
 
-	if cfg.HTTPPublicURL != "https://unhoused.example.com" {
-		t.Errorf("HTTPPublicURL = %q", cfg.HTTPPublicURL)
-	}
-	if cfg.ListenPort != 9000 {
-		t.Errorf("ListenPort = %d", cfg.ListenPort)
-	}
-	if cfg.RefreshIntervalSeconds != 10 {
-		t.Errorf("RefreshIntervalSeconds = %d", cfg.RefreshIntervalSeconds)
-	}
+	assert.Equal(t, "https://unhoused.example.com", cfg.HTTPPublicURL)
+	assert.Equal(t, 9000, cfg.ListenPort)
+	assert.Equal(t, 10, cfg.RefreshIntervalSeconds)
 }
 
 func TestLoadValidationErrors(t *testing.T) {
@@ -149,22 +133,15 @@ profiles:
 			path := writeConfigFile(t, tt.yaml)
 
 			_, err := Load(path)
-			if err == nil {
-				t.Fatalf("Load returned no error, want error containing %q", tt.wantErr)
-			}
-
-			if !strings.Contains(err.Error(), tt.wantErr) {
-				t.Errorf("Load error = %q, want it to contain %q", err.Error(), tt.wantErr)
-			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
 		})
 	}
 }
 
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load(filepath.Join(t.TempDir(), "does-not-exist.yaml"))
-	if err == nil {
-		t.Fatal("Load returned no error for missing file")
-	}
+	require.Error(t, err)
 }
 
 func TestShortRegion(t *testing.T) {
@@ -181,18 +158,16 @@ func TestShortRegion(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got, err := ShortRegion(tt.region)
-		if tt.wantErr {
-			if err == nil {
-				t.Errorf("ShortRegion(%q) returned no error, want error", tt.region)
+		t.Run(string(tt.region), func(t *testing.T) {
+			got, err := ShortRegion(tt.region)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
 			}
-			continue
-		}
-		if err != nil {
-			t.Errorf("ShortRegion(%q) returned error: %v", tt.region, err)
-		}
-		if got != tt.want {
-			t.Errorf("ShortRegion(%q) = %q, want %q", tt.region, got, tt.want)
-		}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
 	}
 }

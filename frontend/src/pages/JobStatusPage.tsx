@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useJobStatus } from '../api/queries'
 import type { Allocation, ClientStatus, Port } from '../api/types'
+import { CopyButton } from '../components/CopyButton'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
@@ -60,22 +61,35 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
   )
 }
 
+function UrlRow({ url, index, copyLabel }: { url: string; index: number; copyLabel: string }) {
+  return (
+    <span className={`${styles.copyableField} ${styles.urlRow} ${index % 2 === 1 ? styles.urlRowAlt : ''}`}>
+      <a href={url} target="_blank" rel="noreferrer" className="mono">
+        {url}
+      </a>
+      <CopyButton value={url} label={copyLabel} />
+    </span>
+  )
+}
+
 function PortLinks({ ports }: { ports: Port[] }) {
+  // Rows are indexed continuously across all ports (not reset per port) so the alternating
+  // background gives visual contrast between every URL line, while port name labels stay plain.
+  let rowIndex = 0
+
   return (
     <div className={styles.ports}>
-      {ports.map((port) => (
-        <div key={`${port.label}-${port.port}`} className={styles.port}>
-          <span className={styles.portLabel}>{port.label}</span>
-          <a href={port.url} target="_blank" rel="noreferrer" className="mono">
-            {port.url}
-          </a>
-          {port.nodeUrl && (
-            <a href={port.nodeUrl} target="_blank" rel="noreferrer" className="mono">
-              {port.nodeUrl}
-            </a>
-          )}
-        </div>
-      ))}
+      {ports.map((port) => {
+        const urlIndex = rowIndex++
+        const nodeUrlIndex = port.nodeUrl ? rowIndex++ : -1
+        return (
+          <div key={`${port.label}-${port.port}`} className={styles.port}>
+            <span className={styles.portLabel}>{port.label}</span>
+            <UrlRow url={port.url} index={urlIndex} copyLabel="Copy port URL" />
+            {port.nodeUrl && <UrlRow url={port.nodeUrl} index={nodeUrlIndex} copyLabel="Copy node URL" />}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -212,10 +226,23 @@ export function JobStatusPage() {
               <tbody>
                 {filteredAllocations.map((alloc) => (
                   <tr key={alloc.id}>
-                    <td className="mono">{alloc.id}</td>
+                    <td className="mono">
+                      <span className={styles.copyableField}>
+                        {alloc.id}
+                        <CopyButton value={alloc.id} label="Copy allocation ID" />
+                      </span>
+                    </td>
                     <td>
-                      <div>{alloc.nodeName}</div>
-                      <div className={`${styles.nodeIp} mono`}>{alloc.nodeIp}</div>
+                      <div className={styles.stackedRows}>
+                        <div className={styles.copyableField}>
+                          {alloc.nodeName}
+                          <CopyButton value={alloc.nodeName} label="Copy node name" />
+                        </div>
+                        <div className={`${styles.copyableField} ${styles.nodeIp}`}>
+                          <span className="mono">{alloc.nodeIp}</span>
+                          <CopyButton value={alloc.nodeIp} label="Copy node IP" />
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <StatusBadge status={alloc.clientStatus} />

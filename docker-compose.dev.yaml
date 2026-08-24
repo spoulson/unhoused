@@ -1,0 +1,42 @@
+# Dev override: swaps the production build+serve images for live-reloading dev processes,
+# bind-mounted to the local source so edits take effect without rebuilding either image.
+#
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
+#
+# backend: runs under gow (github.com/mitranim/gow), which watches .go files and re-runs
+# `go run` on change. The repo root is bind-mounted to /src (the dev stage's WORKDIR); the
+# config.yaml mount from docker-compose.yaml's base backend service still applies here since
+# compose concatenates volume lists rather than replacing them. Go's module and build caches get
+# their own named volumes so `go mod download`/compilation results survive container restarts
+# instead of starting cold every time.
+#
+# frontend: runs Vite's dev server bind-mounted to frontend/. node_modules gets its own named
+# volume rather than coming from the bind mount: the image's node_modules is installed for linux
+# inside the container, and letting the host's (macOS/etc.) node_modules shadow it via the bind
+# mount breaks native deps like esbuild that ship platform-specific binaries. Both named volumes
+# are seeded from their image's contents the first time they're created, then persist across
+# restarts.
+services:
+  backend:
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/src
+      - backend_go_mod_cache:/root/go/pkg/mod
+      - backend_go_build_cache:/root/.cache/go-build
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    expose:
+      - "3000"
+
+volumes:
+  backend_go_mod_cache:
+  backend_go_build_cache:
+  frontend_node_modules:

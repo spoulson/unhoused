@@ -118,35 +118,9 @@ func nodeURL(env config.Environment, region config.Region, nodeName string, port
 	}
 }
 
-// allocationNodeIP returns the host IP an allocation is running on, derived
-// from its allocated network resources. Assumes standard Nomad host
-// networking, where the allocation's network IP is the node's own IP.
-func allocationNodeIP(alloc *nomadapi.Allocation) string {
-	if alloc.AllocatedResources == nil {
-		return ""
-	}
-
-	networks := alloc.AllocatedResources.Shared.Networks
-	if len(networks) > 0 && networks[0] != nil {
-		return networks[0].IP
-	}
-
-	ports := alloc.AllocatedResources.Shared.Ports
-	if len(ports) > 0 {
-		return ports[0].HostIP
-	}
-
-	return ""
-}
-
 // extractPorts builds the ports[] DTO for an allocation, one entry per
 // network port, per specs/api.md.
-func extractPorts(alloc *nomadapi.Allocation, profile config.Profile) ([]portDTO, error) {
-	if alloc.AllocatedResources == nil {
-		return nil, nil
-	}
-
-	mappings := alloc.AllocatedResources.Shared.Ports
+func extractPorts(mappings []nomadapi.PortMapping, nodeName string, profile config.Profile) ([]portDTO, error) {
 	ports := make([]portDTO, 0, len(mappings))
 
 	for _, p := range mappings {
@@ -158,7 +132,7 @@ func extractPorts(alloc *nomadapi.Allocation, profile config.Profile) ([]portDTO
 		}
 
 		if p.Label == "http" {
-			url, err := nodeURL(profile.Environment, profile.Region, alloc.NodeName, p.Value)
+			url, err := nodeURL(profile.Environment, profile.Region, nodeName, p.Value)
 			if err != nil {
 				return nil, err
 			}

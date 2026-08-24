@@ -10,6 +10,8 @@ import (
 	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"unhoused/internal/config"
 	"unhoused/internal/nomadclient"
@@ -59,6 +61,33 @@ func (f *fakeNomad) AllocationInfo(_ context.Context, allocID string) (*nomadapi
 	return f.allocInfo[allocID], nil
 }
 
+func (f *fakeNomad) GetAllocationPorts(_ context.Context, allocID string) (nomadclient.AllocationPorts, error) {
+	if f.allocInfoErr != nil {
+		return nomadclient.AllocationPorts{}, f.allocInfoErr
+	}
+
+	alloc := f.allocInfo[allocID]
+	if alloc == nil || alloc.AllocatedResources == nil {
+		return nomadclient.AllocationPorts{}, nil
+	}
+
+	result := nomadclient.AllocationPorts{
+		Ports: alloc.AllocatedResources.Shared.Ports,
+	}
+
+	networks := alloc.AllocatedResources.Shared.Networks
+	if len(networks) > 0 && networks[0] != nil {
+		result.NodeIP = networks[0].IP
+		return result, nil
+	}
+
+	if len(result.Ports) > 0 {
+		result.NodeIP = result.Ports[0].HostIP
+	}
+
+	return result, nil
+}
+
 // realNotFoundErr round-trips a request through the actual Nomad SDK against
 // a test server that returns 404, so tests exercise the real
 // api.UnexpectedResponseError type classifyNomadErr type-asserts on, rather
@@ -72,14 +101,10 @@ func realNotFoundErr(t *testing.T) error {
 	t.Cleanup(server.Close)
 
 	client, err := nomadapi.NewClient(&nomadapi.Config{Address: server.URL})
-	if err != nil {
-		t.Fatalf("building nomad client: %v", err)
-	}
+	require.NoError(t, err, "building nomad client")
 
 	_, _, err = client.Jobs().Info("missing", nil)
-	if err == nil {
-		t.Fatal("expected an error from a 404 response, got nil")
-	}
+	require.Error(t, err, "expected an error from a 404 response")
 
 	return err
 }
@@ -99,9 +124,7 @@ func decodeJSON[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 
 	var v T
 	err := json.Unmarshal(rec.Body.Bytes(), &v)
-	if err != nil {
-		t.Fatalf("decoding response body %q: %v", rec.Body.String(), err)
-	}
+	require.NoError(t, err, "decoding response body %q", rec.Body.String())
 	return v
 }
 
@@ -112,20 +135,14 @@ func TestHandleListProfiles(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
+	require.Equal(t, http.StatusOK, rec.Code)
 
 	got := decodeJSON[profilesResponse](t, rec)
-	if got.RefreshIntervalSeconds != 5 {
-		t.Errorf("RefreshIntervalSeconds = %d, want 5", got.RefreshIntervalSeconds)
-	}
-	if len(got.Profiles) != 2 {
-		t.Fatalf("len(Profiles) = %d, want 2", len(got.Profiles))
-	}
-	if got.Profiles[0].Name != "prod-usw1" || got.Profiles[0].Environment != "production" || got.Profiles[0].Region != "us-west1" {
-		t.Errorf("Profiles[0] = %+v", got.Profiles[0])
-	}
+	assert.Equal(t, 5, got.RefreshIntervalSeconds)
+	require.Len(t, got.Profiles, 2)
+	assert.Equal(t, "prod-usw1", got.Profiles[0].Name)
+	assert.Equal(t, "production", got.Profiles[0].Environment)
+	assert.Equal(t, "us-west1", got.Profiles[0].Region)
 }
 
 func TestHandleListJobsUnknownProfile(t *testing.T) {
@@ -135,14 +152,10 @@ func TestHandleListJobsUnknownProfile(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
+	require.Equal(t, http.StatusNotFound, rec.Code)
 
 	got := decodeJSON[errorEnvelope](t, rec)
-	if got.Error.Message != "profile not found" {
-		t.Errorf("error message = %q", got.Error.Message)
-	}
+	assert.Equal(t, "profile not found", got.Error.Message)
 }
 
 func TestHandleListJobsSortedNewestFirst(t *testing.T) {
@@ -158,17 +171,12 @@ func TestHandleListJobsSortedNewestFirst(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
-	}
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
 
 	got := decodeJSON[jobsResponse](t, rec)
-	if len(got.Jobs) != 2 {
-		t.Fatalf("len(Jobs) = %d, want 2", len(got.Jobs))
-	}
-	if got.Jobs[0].ID != "new" || got.Jobs[1].ID != "old" {
-		t.Errorf("Jobs order = %q, %q, want new, old", got.Jobs[0].ID, got.Jobs[1].ID)
-	}
+	require.Len(t, got.Jobs, 2)
+	assert.Equal(t, "new", got.Jobs[0].ID)
+	assert.Equal(t, "old", got.Jobs[1].ID)
 }
 
 func TestHandleListJobsNomadError(t *testing.T) {
@@ -179,9 +187,7 @@ func TestHandleListJobsNomadError(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusBadGateway {
-		t.Fatalf("status = %d, want 502", rec.Code)
-	}
+	assert.Equal(t, http.StatusBadGateway, rec.Code)
 }
 
 func TestHandleJobStatusUnknownJob(t *testing.T) {
@@ -192,14 +198,10 @@ func TestHandleJobStatusUnknownJob(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404, body=%s", rec.Code, rec.Body.String())
-	}
+	require.Equal(t, http.StatusNotFound, rec.Code, "body=%s", rec.Body.String())
 
 	got := decodeJSON[errorEnvelope](t, rec)
-	if got.Error.Message != "job not found" {
-		t.Errorf("error message = %q", got.Error.Message)
-	}
+	assert.Equal(t, "job not found", got.Error.Message)
 }
 
 func TestHandleJobStatusHappyPath(t *testing.T) {
@@ -246,37 +248,28 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
-	}
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
 
 	got := decodeJSON[jobStatusResponse](t, rec)
 
-	if got.Job.ID != "web" || got.Job.Status != "running" {
-		t.Errorf("Job = %+v", got.Job)
-	}
+	assert.Equal(t, "web", got.Job.ID)
+	assert.Equal(t, "running", got.Job.Status)
 
-	if len(got.VersionGroups) != 1 {
-		t.Fatalf("len(VersionGroups) = %d, want 1", len(got.VersionGroups))
-	}
+	require.Len(t, got.VersionGroups, 1)
 	vg := got.VersionGroups[0]
-	if vg.Version != 3 || vg.NewestAllocationUptimeSeconds != 1234 || vg.StatusCounts["running"] != 1 {
-		t.Errorf("VersionGroups[0] = %+v", vg)
-	}
+	assert.EqualValues(t, 3, vg.Version)
+	assert.Equal(t, int64(1234), vg.NewestAllocationUptimeSeconds)
+	assert.Equal(t, 1, vg.StatusCounts["running"])
 
-	if len(got.Allocations) != 1 {
-		t.Fatalf("len(Allocations) = %d, want 1", len(got.Allocations))
-	}
+	require.Len(t, got.Allocations, 1)
 	alloc := got.Allocations[0]
-	if alloc.NodeIP != "10.0.0.5" || alloc.UptimeSeconds != 1234 || alloc.Version != 3 {
-		t.Errorf("Allocations[0] = %+v", alloc)
-	}
-	if len(alloc.Ports) != 1 || alloc.Ports[0].URL != "http://10.0.0.5:8080" {
-		t.Errorf("Allocations[0].Ports = %+v", alloc.Ports)
-	}
-	if alloc.Ports[0].NodeURL != "http://node1.c.mailforce-production-usw1.internal:8080" {
-		t.Errorf("Allocations[0].Ports[0].NodeURL = %q", alloc.Ports[0].NodeURL)
-	}
+	assert.Equal(t, "10.0.0.5", alloc.NodeIP)
+	assert.Equal(t, int64(1234), alloc.UptimeSeconds)
+	assert.EqualValues(t, 3, alloc.Version)
+
+	require.Len(t, alloc.Ports, 1)
+	assert.Equal(t, "http://10.0.0.5:8080", alloc.Ports[0].URL)
+	assert.Equal(t, "http://node1.c.mailforce-production-usw1.internal:8080", alloc.Ports[0].NodeURL)
 }
 
 func TestHandleJobStatusStoppedJob(t *testing.T) {
@@ -298,7 +291,5 @@ func TestHandleJobStatusStoppedJob(t *testing.T) {
 	srv.Handler().ServeHTTP(rec, req)
 
 	got := decodeJSON[jobStatusResponse](t, rec)
-	if got.Job.Status != "stopped" {
-		t.Errorf("Job.Status = %q, want stopped", got.Job.Status)
-	}
+	assert.Equal(t, "stopped", got.Job.Status)
 }

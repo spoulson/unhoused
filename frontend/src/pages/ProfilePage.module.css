@@ -1,3 +1,22 @@
+.search {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 1rem;
+  background: var(--gb-bg1);
+  color: var(--gb-fg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 4px;
+  padding: 0.45rem 0.65rem;
+  font-family: var(--font-text);
+  font-size: 0.9rem;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--gb-blue);
+}
+
 .table {
   width: 100%;
   margin-top: 1rem;
@@ -19,6 +38,30 @@
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;
+  padding: 0;
+}
+
+.sortButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.6rem 1rem;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  color: var(--gb-fg0);
+}
+
+.sortArrow {
+  color: var(--gb-blue);
+  font-size: 0.75rem;
 }
 
 .table tbody tr:last-child td {

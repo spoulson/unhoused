@@ -4,7 +4,13 @@ import (
 	"net/http"
 	"sort"
 	"time"
+
+	"unhoused/internal/syncutil"
 )
+
+// allocationFetchConcurrency bounds how many allocations' details are fetched
+// from Nomad concurrently per job-status request.
+const allocationFetchConcurrency = 8
 
 func (s *Server) handleListProfiles(w http.ResponseWriter, r *http.Request) {
 	profiles := make([]profileDTO, 0, len(s.cfg.Profiles))
@@ -91,32 +97,49 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	submitTimes := versionSubmitTimes(versions)
 	versionGroups := groupByVersion(allocStubs, submitTimes, now)
 
-	allocations := make([]allocationDTO, 0, len(allocStubs))
-	for _, stub := range allocStubs {
-		alloc, err := client.AllocationInfo(ctx, stub.ID)
-		if err != nil {
-			status, message := classifyNomadErr(err, "allocation not found")
-			writeError(w, status, message)
-			return
-		}
+	// Allocation details are fetched concurrently (bounded by
+	// allocationFetchConcurrency) since each is an independent Nomad call.
+	// Each closure writes only to its own index of allocations, so no
+	// synchronization is needed for those writes; errors are collected by
+	// fanOut.Wait() and reported after every fetch has completed, rather than
+	// short-circuiting the others (there's no cancellation hook to do
+	// otherwise once goroutines are already running).
+	allocations := make([]allocationDTO, len(allocStubs))
+	fanOut := syncutil.NewFanOut(allocationFetchConcurrency)
 
-		ports, err := extractPorts(alloc, profile)
-		if err != nil {
-			writeError(w, http.StatusBadGateway, err.Error())
-			return
-		}
+	for i, stub := range allocStubs {
+		fanOut.Run(func(any) error {
+			allocPorts, err := client.GetAllocationPorts(ctx, stub.ID)
+			if err != nil {
+				return err
+			}
 
-		allocations = append(allocations, allocationDTO{
-			ID:            stub.ID,
-			NodeName:      stub.NodeName,
-			NodeIP:        allocationNodeIP(alloc),
-			ClientStatus:  stub.ClientStatus,
-			DesiredStatus: stub.DesiredStatus,
-			TaskGroup:     stub.TaskGroup,
-			Version:       stub.JobVersion,
-			UptimeSeconds: uptimeSeconds(submitTimes[stub.JobVersion], now),
-			Ports:         ports,
-		})
+			ports, err := extractPorts(allocPorts.Ports, stub.NodeName, profile)
+			if err != nil {
+				return err
+			}
+
+			allocations[i] = allocationDTO{
+				ID:            stub.ID,
+				NodeName:      stub.NodeName,
+				NodeIP:        allocPorts.NodeIP,
+				ClientStatus:  stub.ClientStatus,
+				DesiredStatus: stub.DesiredStatus,
+				TaskGroup:     stub.TaskGroup,
+				Version:       stub.JobVersion,
+				UptimeSeconds: uptimeSeconds(submitTimes[stub.JobVersion], now),
+				Ports:         ports,
+			}
+
+			return nil
+		}, nil)
+	}
+
+	errs := fanOut.Wait()
+	if len(errs) > 0 {
+		status, message := classifyNomadErr(errs[0], "allocation not found")
+		writeError(w, status, message)
+		return
 	}
 
 	writeJSON(w, http.StatusOK, jobStatusResponse{

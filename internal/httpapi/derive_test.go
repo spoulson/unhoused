@@ -5,6 +5,8 @@ import (
 	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"unhoused/internal/config"
 )
@@ -27,9 +29,7 @@ func TestDeriveJobStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := deriveJobStatus(tt.job)
-			if got != tt.want {
-				t.Errorf("deriveJobStatus() = %q, want %q", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -50,9 +50,7 @@ func TestUptimeSeconds(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := uptimeSeconds(tt.submitTime, now)
-			if got != tt.want {
-				t.Errorf("uptimeSeconds() = %d, want %d", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -67,15 +65,9 @@ func TestVersionSubmitTimes(t *testing.T) {
 
 	got := versionSubmitTimes(versions)
 
-	if len(got) != 2 {
-		t.Fatalf("versionSubmitTimes() returned %d entries, want 2", len(got))
-	}
-	if !got[3].Equal(time.Unix(0, 3_000_000_000)) {
-		t.Errorf("versionSubmitTimes()[3] = %v", got[3])
-	}
-	if !got[2].Equal(time.Unix(0, 2_000_000_000)) {
-		t.Errorf("versionSubmitTimes()[2] = %v", got[2])
-	}
+	require.Len(t, got, 2)
+	assert.True(t, got[3].Equal(time.Unix(0, 3_000_000_000)), "versionSubmitTimes()[3] = %v", got[3])
+	assert.True(t, got[2].Equal(time.Unix(0, 2_000_000_000)), "versionSubmitTimes()[2] = %v", got[2])
 }
 
 func TestGroupByVersion(t *testing.T) {
@@ -95,45 +87,27 @@ func TestGroupByVersion(t *testing.T) {
 
 	got := groupByVersion(allocs, submitTimes, now)
 
-	if len(got) != 2 {
-		t.Fatalf("groupByVersion() returned %d groups, want 2", len(got))
-	}
+	require.Len(t, got, 2)
 
 	// Sorted newest-first.
-	if got[0].Version != 3 || got[1].Version != 2 {
-		t.Fatalf("groupByVersion() order = %d, %d, want 3, 2", got[0].Version, got[1].Version)
-	}
+	require.Equal(t, uint64(3), got[0].Version)
+	require.Equal(t, uint64(2), got[1].Version)
 
 	v3 := got[0]
-	if v3.NewestAllocationUptimeSeconds != 1234 {
-		t.Errorf("v3 uptime = %d, want 1234", v3.NewestAllocationUptimeSeconds)
-	}
-	if v3.StatusCounts["running"] != 2 {
-		t.Errorf("v3 running count = %d, want 2", v3.StatusCounts["running"])
-	}
-	if v3.StatusCounts["pending"] != 1 {
-		t.Errorf("v3 pending count = %d, want 1", v3.StatusCounts["pending"])
-	}
-	if v3.StatusCounts["failed"] != 0 {
-		t.Errorf("v3 failed count = %d, want 0 (present as zero key)", v3.StatusCounts["failed"])
-	}
+	assert.Equal(t, int64(1234), v3.NewestAllocationUptimeSeconds)
+	assert.Equal(t, 2, v3.StatusCounts["running"])
+	assert.Equal(t, 1, v3.StatusCounts["pending"])
+	assert.Equal(t, 0, v3.StatusCounts["failed"], "present as zero key")
 
 	v2 := got[1]
-	if v2.StatusCounts["lost"] != 1 {
-		t.Errorf("v2 lost count = %d, want 1", v2.StatusCounts["lost"])
-	}
+	assert.Equal(t, 1, v2.StatusCounts["lost"])
 	// Unknown client statuses are dropped rather than growing the map.
-	if len(v2.StatusCounts) != len(clientStatuses) {
-		t.Errorf("v2 StatusCounts has %d keys, want %d", len(v2.StatusCounts), len(clientStatuses))
-	}
+	assert.Len(t, v2.StatusCounts, len(clientStatuses))
 }
 
 func TestPortURL(t *testing.T) {
 	got := portURL("10.0.0.5", 8080)
-	want := "http://10.0.0.5:8080"
-	if got != want {
-		t.Errorf("portURL() = %q, want %q", got, want)
-	}
+	assert.Equal(t, "http://10.0.0.5:8080", got)
 }
 
 func TestNodeURL(t *testing.T) {
@@ -176,63 +150,14 @@ func TestNodeURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := nodeURL(tt.env, tt.region, tt.nodeName, tt.port)
+
 			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("nodeURL() returned no error, want error")
-				}
+				require.Error(t, err)
 				return
 			}
-			if err != nil {
-				t.Fatalf("nodeURL() returned error: %v", err)
-			}
-			if got != tt.want {
-				t.Errorf("nodeURL() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
 
-func TestAllocationNodeIP(t *testing.T) {
-	tests := []struct {
-		name  string
-		alloc *nomadapi.Allocation
-		want  string
-	}{
-		{
-			name:  "no allocated resources",
-			alloc: &nomadapi.Allocation{},
-			want:  "",
-		},
-		{
-			name: "from network resource",
-			alloc: &nomadapi.Allocation{
-				AllocatedResources: &nomadapi.AllocatedResources{
-					Shared: nomadapi.AllocatedSharedResources{
-						Networks: []*nomadapi.NetworkResource{{IP: "10.0.0.5"}},
-					},
-				},
-			},
-			want: "10.0.0.5",
-		},
-		{
-			name: "falls back to port host ip",
-			alloc: &nomadapi.Allocation{
-				AllocatedResources: &nomadapi.AllocatedResources{
-					Shared: nomadapi.AllocatedSharedResources{
-						Ports: []nomadapi.PortMapping{{HostIP: "10.0.0.9"}},
-					},
-				},
-			},
-			want: "10.0.0.9",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := allocationNodeIP(tt.alloc)
-			if got != tt.want {
-				t.Errorf("allocationNodeIP() = %q, want %q", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -243,46 +168,25 @@ func TestExtractPorts(t *testing.T) {
 		Region:      config.RegionUSWest1,
 	}
 
-	alloc := &nomadapi.Allocation{
-		NodeName: "node1",
-		AllocatedResources: &nomadapi.AllocatedResources{
-			Shared: nomadapi.AllocatedSharedResources{
-				Ports: []nomadapi.PortMapping{
-					{Label: "http", Value: 8080, HostIP: "10.0.0.5"},
-					{Label: "metrics", Value: 9090, HostIP: "10.0.0.5"},
-				},
-			},
-		},
+	ports := []nomadapi.PortMapping{
+		{Label: "http", Value: 8080, HostIP: "10.0.0.5"},
+		{Label: "metrics", Value: 9090, HostIP: "10.0.0.5"},
 	}
 
-	got, err := extractPorts(alloc, profile)
-	if err != nil {
-		t.Fatalf("extractPorts() returned error: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("extractPorts() returned %d ports, want 2", len(got))
-	}
+	got, err := extractPorts(ports, "node1", profile)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
 
 	httpPort := got[0]
-	if httpPort.URL != "http://10.0.0.5:8080" {
-		t.Errorf("http port URL = %q", httpPort.URL)
-	}
-	if httpPort.NodeURL != "http://node1.node.us-west1.staging.mailforce:8080" {
-		t.Errorf("http port NodeURL = %q", httpPort.NodeURL)
-	}
+	assert.Equal(t, "http://10.0.0.5:8080", httpPort.URL)
+	assert.Equal(t, "http://node1.node.us-west1.staging.mailforce:8080", httpPort.NodeURL)
 
 	metricsPort := got[1]
-	if metricsPort.NodeURL != "" {
-		t.Errorf("non-http port NodeURL = %q, want empty", metricsPort.NodeURL)
-	}
+	assert.Empty(t, metricsPort.NodeURL)
 }
 
-func TestExtractPortsNoAllocatedResources(t *testing.T) {
-	got, err := extractPorts(&nomadapi.Allocation{}, config.Profile{})
-	if err != nil {
-		t.Fatalf("extractPorts() returned error: %v", err)
-	}
-	if got != nil {
-		t.Errorf("extractPorts() = %v, want nil", got)
-	}
+func TestExtractPortsNoPorts(t *testing.T) {
+	got, err := extractPorts(nil, "node1", config.Profile{})
+	require.NoError(t, err)
+	assert.Empty(t, got)
 }

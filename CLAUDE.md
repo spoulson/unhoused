@@ -33,6 +33,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   [specs/architecture.md](specs/architecture.md)'s Docker Test Environment section). Open
   `http://localhost:8080` in a browser once it's up.
 - `docker compose down` — stop and remove the containers.
+- `make dev` — dev mode: frontend runs Vite's dev server bind-mounted to `frontend/`, so source edits show
+  up on a browser reload without a rebuild (see [specs/architecture.md](specs/architecture.md)'s Docker Dev
+  Mode section). Equivalent to `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build`.
 
 ## Architecture
 

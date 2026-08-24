@@ -8,6 +8,7 @@ export function Layout() {
     <div className={styles.layout}>
       <header className={styles.header}>
         <Link to="/" className={styles.title}>
+          <img src="/logo.svg" alt="" className={styles.logo} />
           unhoused
         </Link>
         <nav className={styles.breadcrumb}>

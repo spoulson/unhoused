@@ -1,0 +1,18 @@
+.copyButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gb-fg2);
+  font-size: 0.9em;
+  padding: 0 0.2em;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.copyButton:hover {
+  color: var(--gb-blue);
+}
+
+.copied {
+  color: var(--gb-green);
+}

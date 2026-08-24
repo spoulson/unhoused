@@ -130,6 +130,23 @@
   font-size: 0.85rem;
 }
 
+.copyableField {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.stackedRows > .copyableField {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.stackedRows > .copyableField:nth-child(even) {
+  background: var(--gb-bg1);
+}
+
 .ports {
   display: flex;
   flex-direction: column;
@@ -145,4 +162,15 @@
 .portLabel {
   color: var(--gb-fg2);
   font-weight: 600;
+}
+
+.urlRow {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.urlRowAlt {
+  background: var(--gb-bg1);
 }

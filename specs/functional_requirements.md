@@ -11,6 +11,15 @@ High level functional requirements for Unhoused.
 
 - Profile page lists the available Nomad jobs sorted newest to oldest.
 - User clicks a job to view the job status page.
+- Text search box filters the job list to names containing the search text (case-insensitive substring
+  match).
+- Job and Submitted columns are sortable: an up/down arrow next to the column name indicates the active
+  sort. Clicking a column name toggles it through ascending → descending → unsorted (arrow removed),
+  repeating; clicking a different column starts it at ascending. Default is Submitted, descending.
+- Search text and sort state are reflected in the URL query string (`q`, `sort`, `dir`), so reloading the
+  page or opening a bookmarked/shared link restores the same search and sort. The default sort (Submitted,
+  descending) is the absence of `sort`/`dir` rather than an explicit value, keeping the URL clean when
+  nothing's been changed.
 
 # Job Status Page
 

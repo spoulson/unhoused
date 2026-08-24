@@ -62,3 +62,24 @@ reach each other by service name:
   (rather than another container), use `http://host.docker.internal:4646` instead of `127.0.0.1:4646` —
   inside a container, `127.0.0.1` refers to the container itself, not the host.
 
+## Docker Dev Mode
+
+- `docker-compose.dev.yaml` is an override for local iteration: `docker compose -f docker-compose.yaml
+  -f docker-compose.dev.yaml up --build` (or `make dev`) swaps both `backend` and `frontend`'s production
+  build+serve images for live-reloading dev processes, bind-mounted to the local source so edits take effect
+  without rebuilding either image. `caddy` is unchanged by the override.
+- `frontend`: runs Vite's dev server (the `dev` target in `frontend/Dockerfile`), bind-mounting `./frontend`
+  into the container so source edits are visible on a plain browser reload.
+- `backend`: runs under [`gow`](https://github.com/mitranim/gow) (the `dev` target in the root `Dockerfile`),
+  which watches `.go` files and re-runs `go run . -c /etc/unhoused/config.yaml` on change. The repo root is
+  bind-mounted to `/src`. The `config.yaml` volume mount from `docker-compose.yaml`'s base `backend` service
+  still applies here — compose concatenates a service's `volumes` lists across files rather than replacing
+  them, so the override only needs to add the source and cache mounts.
+- `node_modules` (frontend) and Go's module/build caches (backend, `/root/go/pkg/mod` and
+  `/root/.cache/go-build`) each get their own named volume rather than coming through the bind mount: for
+  `node_modules`, the image's copy is installed for Linux inside the container, and letting the host's
+  (macOS/etc.) `node_modules` shadow it via the bind mount breaks native deps that ship platform-specific
+  binaries (e.g. esbuild); for the Go caches, a named volume just avoids re-downloading modules and
+  recompiling from scratch on every container restart. Each named volume is seeded from its image's contents
+  the first time it's created, then persists across restarts.
+
