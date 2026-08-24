@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 // loggingTransport wraps an http.RoundTripper to log every HTTP request and
@@ -19,7 +20,26 @@ func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		base = http.DefaultTransport
 	}
 
-	slog.Info("nomad request", "method", req.Method, "url", req.URL.String())
+	requestArgs := []any{"method", req.Method, "url", req.URL.String()}
+
+	if req.Body != nil {
+		reqBody, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		err = req.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		req.Body = io.NopCloser(bytes.NewReader(reqBody))
+		requestArgs = append(requestArgs, "bytes", len(reqBody))
+	}
+
+	slog.Info("nomad request", requestArgs...)
+
+	start := time.Now()
 
 	resp, err := base.RoundTrip(req)
 	if err != nil {
@@ -41,6 +61,7 @@ func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		"url", req.URL.String(),
 		"status", resp.StatusCode,
 		"bytes", len(body),
+		slog.Duration("elapsed", time.Since(start)),
 	)
 
 	resp.Body = io.NopCloser(bytes.NewReader(body))
