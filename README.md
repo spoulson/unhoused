@@ -130,9 +130,9 @@ See [specs/architecture.md](specs/architecture.md) for the full picture, includi
 
 | Command | Purpose |
 |---|---|
-| `docker compose up --build` | Run backend, frontend, and Caddy together |
+| `docker compose up` | Run backend, frontend, and Caddy together |
 | `docker compose down` | Stop and remove containers |
-| `make dev` | Dev mode — frontend source bind-mounted for live reload |
+| `make dev` | Run backend, frontend, and Caddy together in dev mode — frontend and backend source bind-mounted for live reload |
 | `make docker` | Build production images (`unhoused-backend:latest`, `unhoused-frontend:latest`) |
 
 ## Documentation
