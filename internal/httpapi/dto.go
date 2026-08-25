@@ -38,9 +38,9 @@ type jobDTO struct {
 }
 
 type versionGroupDTO struct {
-	Version                       uint64         `json:"version"`
-	NewestAllocationUptimeSeconds int64          `json:"newestAllocationUptimeSeconds"`
-	StatusCounts                  map[string]int `json:"statusCounts"`
+	Version                             uint64         `json:"version"`
+	NewestAllocationLastModifiedSeconds int64          `json:"newestAllocationLastModifiedSeconds"`
+	StatusCounts                        map[string]int `json:"statusCounts"`
 }
 
 type portDTO struct {
@@ -52,15 +52,15 @@ type portDTO struct {
 }
 
 type allocationDTO struct {
-	ID            string    `json:"id"`
-	NodeName      string    `json:"nodeName"`
-	NodeIP        string    `json:"nodeIp"`
-	ClientStatus  string    `json:"clientStatus"`
-	DesiredStatus string    `json:"desiredStatus"`
-	TaskGroup     string    `json:"taskGroup"`
-	Version       uint64    `json:"version"`
-	UptimeSeconds int64     `json:"uptimeSeconds"`
-	Ports         []portDTO `json:"ports"`
+	ID                  string    `json:"id"`
+	NodeName            string    `json:"nodeName"`
+	NodeIP              string    `json:"nodeIp"`
+	ClientStatus        string    `json:"clientStatus"`
+	DesiredStatus       string    `json:"desiredStatus"`
+	TaskGroup           string    `json:"taskGroup"`
+	Version             uint64    `json:"version"`
+	LastModifiedSeconds int64     `json:"lastModifiedSeconds"`
+	Ports               []portDTO `json:"ports"`
 }
 
 type paginationDTO struct {

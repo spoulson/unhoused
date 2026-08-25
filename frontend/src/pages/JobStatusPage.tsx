@@ -39,10 +39,10 @@ const DEFAULT_PAGE_SIZE = 50
 const VERSION_PAGE_SIZE_OPTIONS = [5, 10, 25, 50]
 const DEFAULT_VERSION_PAGE_SIZE = 5
 
-type SortColumn = 'id' | 'node' | 'status' | 'desired' | 'taskGroup' | 'version' | 'uptime'
+type SortColumn = 'id' | 'node' | 'status' | 'desired' | 'taskGroup' | 'version' | 'lastModified'
 type SortDirection = 'asc' | 'desc' | 'none'
 
-const SORT_COLUMNS: SortColumn[] = ['id', 'node', 'status', 'desired', 'taskGroup', 'version', 'uptime']
+const SORT_COLUMNS: SortColumn[] = ['id', 'node', 'status', 'desired', 'taskGroup', 'version', 'lastModified']
 const SORT_DIRECTIONS: SortDirection[] = ['asc', 'desc', 'none']
 
 // Clicking a column advances it through this cycle.
@@ -54,7 +54,7 @@ interface SortState {
 }
 
 // Most recently started allocations first, until the user picks a different column/direction.
-const DEFAULT_SORT: SortState = { column: 'uptime', direction: 'asc' }
+const DEFAULT_SORT: SortState = { column: 'lastModified', direction: 'asc' }
 
 function nextDirection(direction: SortDirection): SortDirection {
   return SORT_CYCLE[(SORT_CYCLE.indexOf(direction) + 1) % SORT_CYCLE.length]
@@ -455,8 +455,8 @@ export function JobStatusPage() {
           <div key={group.version} className={styles.versionGroup}>
             <div className={styles.versionHeader}>
               <span>Version {group.version}</span>
-              <span className={styles.uptime}>
-                uptime {formatDuration(group.newestAllocationUptimeSeconds)}
+              <span className={styles.lastModified}>
+                last modified {formatDuration(group.newestAllocationLastModifiedSeconds)}
               </span>
             </div>
             <div className={styles.statusCounts}>
@@ -554,7 +554,7 @@ export function JobStatusPage() {
                     <SortableHeader column="desired" label="Desired" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="taskGroup" label="Task Group" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="version" label="Version" sort={sort} onClick={handleSortClick} />
-                    <SortableHeader column="uptime" label="Uptime" sort={sort} onClick={handleSortClick} />
+                    <SortableHeader column="lastModified" label="Last Modified" sort={sort} onClick={handleSortClick} />
                     <th>Ports</th>
                   </tr>
                 </thead>
@@ -585,7 +585,7 @@ export function JobStatusPage() {
                       <td>{alloc.desiredStatus}</td>
                       <td>{alloc.taskGroup}</td>
                       <td>{alloc.version}</td>
-                      <td>{formatDuration(alloc.uptimeSeconds)}</td>
+                      <td>{formatDuration(alloc.lastModifiedSeconds)}</td>
                       <td>
                         <PortLinks ports={alloc.ports} />
                       </td>

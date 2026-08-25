@@ -35,7 +35,7 @@ export interface Job {
 
 export interface VersionGroup {
   version: number
-  newestAllocationUptimeSeconds: number
+  newestAllocationLastModifiedSeconds: number
   statusCounts: Record<ClientStatus, number>
 }
 
@@ -55,7 +55,7 @@ export interface Allocation {
   desiredStatus: string
   taskGroup: string
   version: number
-  uptimeSeconds: number
+  lastModifiedSeconds: number
   ports: Port[]
 }
 

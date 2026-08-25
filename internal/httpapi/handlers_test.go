@@ -265,13 +265,13 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	require.Len(t, got.VersionGroups, 1)
 	vg := got.VersionGroups[0]
 	assert.EqualValues(t, 3, vg.Version)
-	assert.Equal(t, int64(1234), vg.NewestAllocationUptimeSeconds)
+	assert.Equal(t, int64(1234), vg.NewestAllocationLastModifiedSeconds)
 	assert.Equal(t, 1, vg.StatusCounts["running"])
 
 	require.Len(t, got.Allocations, 1)
 	alloc := got.Allocations[0]
 	assert.Equal(t, "10.0.0.5", alloc.NodeIP)
-	assert.Equal(t, int64(1234), alloc.UptimeSeconds)
+	assert.Equal(t, int64(1234), alloc.LastModifiedSeconds)
 	assert.EqualValues(t, 3, alloc.Version)
 
 	require.Len(t, alloc.Ports, 1)

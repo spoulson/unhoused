@@ -26,7 +26,7 @@
   margin-bottom: 0.5rem;
 }
 
-.uptime {
+.lastModified {
   font-weight: 400;
   color: var(--gb-fg2);
   font-family: var(--font-mono);

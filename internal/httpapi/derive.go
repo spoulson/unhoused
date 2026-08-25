@@ -44,8 +44,8 @@ func deriveJobStatus(job *nomadapi.Job) string {
 }
 
 // versionSubmitTimes builds a version -> SubmitTime lookup from the job's
-// version history, used as the uptime reference point for allocations in
-// that version.
+// version history, used as the last-modified reference point for
+// allocations in that version.
 func versionSubmitTimes(versions []*nomadapi.Job) map[uint64]time.Time {
 	times := make(map[uint64]time.Time, len(versions))
 	for _, v := range versions {
@@ -57,7 +57,7 @@ func versionSubmitTimes(versions []*nomadapi.Job) map[uint64]time.Time {
 	return times
 }
 
-func uptimeSeconds(submitTime, now time.Time) int64 {
+func lastModifiedSeconds(submitTime, now time.Time) int64 {
 	d := now.Sub(submitTime)
 	if d < 0 {
 		return 0
@@ -74,9 +74,9 @@ func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint6
 		group, ok := groups[a.JobVersion]
 		if !ok {
 			group = &versionGroupDTO{
-				Version:                       a.JobVersion,
-				NewestAllocationUptimeSeconds: uptimeSeconds(submitTimes[a.JobVersion], now),
-				StatusCounts:                  newStatusCounts(),
+				Version:                             a.JobVersion,
+				NewestAllocationLastModifiedSeconds: lastModifiedSeconds(submitTimes[a.JobVersion], now),
+				StatusCounts:                        newStatusCounts(),
 			}
 			groups[a.JobVersion] = group
 		}
@@ -197,7 +197,7 @@ func allocationFilterOptions(stubs []*nomadapi.AllocationListStub) filterOptions
 
 // allocationSortColumns are the Job Status Page allocation table's sortable
 // columns, matching the column-header click targets in the frontend.
-var allocationSortColumns = []string{"id", "node", "status", "desired", "taskGroup", "version", "uptime"}
+var allocationSortColumns = []string{"id", "node", "status", "desired", "taskGroup", "version", "lastModified"}
 
 func isAllocationSortColumn(column string) bool {
 	for _, c := range allocationSortColumns {
@@ -218,8 +218,9 @@ type allocationSort struct {
 }
 
 // sortAllocationStubs returns stubs sorted per s, or stubs unchanged if s
-// isn't a valid, active sort. submitTimes resolves the "uptime" column,
-// since uptime isn't a stub field (see uptimeSeconds/versionSubmitTimes).
+// isn't a valid, active sort. submitTimes resolves the "lastModified"
+// column, since it isn't a stub field (see lastModifiedSeconds/
+// versionSubmitTimes).
 func sortAllocationStubs(stubs []*nomadapi.AllocationListStub, s allocationSort, submitTimes map[uint64]time.Time) []*nomadapi.AllocationListStub {
 	if !isAllocationSortColumn(s.Column) || (s.Direction != "asc" && s.Direction != "desc") {
 		return stubs
@@ -241,8 +242,8 @@ func sortAllocationStubs(stubs []*nomadapi.AllocationListStub, s allocationSort,
 			return a.TaskGroup < b.TaskGroup
 		case "version":
 			return a.JobVersion < b.JobVersion
-		case "uptime":
-			// Smaller uptime = more recently submitted, i.e. a later SubmitTime.
+		case "lastModified":
+			// Smaller lastModified = more recently submitted, i.e. a later SubmitTime.
 			return submitTimes[a.JobVersion].After(submitTimes[b.JobVersion])
 		default: // "id"
 			return a.ID < b.ID

@@ -58,7 +58,7 @@ its specific fields/columns, and its defaults — this section describes the sha
 - Show indicator whether job status is currently running, stopped, etc.
 - List the counts of allocations by version, then by status.
   - Status refers to running, stopped, etc.
-  - Also shows uptime of newest allocation in the group.
+  - Also shows last modified time of newest allocation in the group.
   - The version list uses the same pagination control described above (Previous/Next, adjustable page
     size, "Showing X–Y of Z versions" summary), but with its own page size options (5/10/25/50) and
     defaults to 5 per page.
@@ -72,7 +72,7 @@ fields:
   - Current status and desired status
   - Task group name
   - Version number
-  - Uptime
+  - Last Modified
   - For each network port defined, link to its IP:port as URL like: `http://<ip>:<port>`.
     - And if the port is labeled `http`, also include a link to the node like: `http://<host>:<port>`.
       - `host` is a hostname value derived from the Nomad node name with special rules based on the Nomad environment and region:
@@ -87,8 +87,8 @@ fields:
 - Filter dropdowns: task group, version, and node (options drawn from the job's actual allocations), plus
   status and desired (options are Nomad's fixed enums for those fields). Version's options are sorted
   numerically descending (newest first); every other dropdown's options are sorted ascending.
-- Sortable columns: Allocation, Node, Status, Desired, Task Group, Version, Uptime (Ports is not sortable).
-  Default sort is Uptime, ascending (most recently started allocations first).
+- Sortable columns: Allocation, Node, Status, Desired, Task Group, Version, Last Modified (Ports is not
+  sortable). Default sort is Last Modified, ascending (most recently modified allocations first).
 - URL query params: `q` (search), `taskGroup`/`version`/`node`/`status`/`desired` (filters), `sort`/`dir`
   (sort column/direction), `page`/`pageSize` (allocation table pagination), `versionPage`/`versionPageSize`
   (version list pagination).

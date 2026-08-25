@@ -34,7 +34,7 @@ func TestDeriveJobStatus(t *testing.T) {
 	}
 }
 
-func TestUptimeSeconds(t *testing.T) {
+func TestLastModifiedSeconds(t *testing.T) {
 	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -49,7 +49,7 @@ func TestUptimeSeconds(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := uptimeSeconds(tt.submitTime, now)
+			got := lastModifiedSeconds(tt.submitTime, now)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -94,7 +94,7 @@ func TestGroupByVersion(t *testing.T) {
 	require.Equal(t, uint64(2), got[1].Version)
 
 	v3 := got[0]
-	assert.Equal(t, int64(1234), v3.NewestAllocationUptimeSeconds)
+	assert.Equal(t, int64(1234), v3.NewestAllocationLastModifiedSeconds)
 	assert.Equal(t, 2, v3.StatusCounts["running"])
 	assert.Equal(t, 1, v3.StatusCounts["pending"])
 	assert.Equal(t, 0, v3.StatusCounts["failed"], "present as zero key")
@@ -271,8 +271,8 @@ func TestAllocationFilterOptionsEmpty(t *testing.T) {
 func TestSortAllocationStubs(t *testing.T) {
 	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
 	submitTimes := map[uint64]time.Time{
-		1: now.Add(-5000 * time.Second), // older submit -> bigger uptime
-		2: now.Add(-1234 * time.Second), // newer submit -> smaller uptime
+		1: now.Add(-5000 * time.Second), // older submit -> bigger lastModified
+		2: now.Add(-1234 * time.Second), // newer submit -> smaller lastModified
 	}
 
 	s1 := &nomadapi.AllocationListStub{ID: "b", NodeName: "nodeB", ClientStatus: "pending", DesiredStatus: "stop", TaskGroup: "web", JobVersion: 1}
@@ -292,8 +292,8 @@ func TestSortAllocationStubs(t *testing.T) {
 		{"taskGroup asc", allocationSort{Column: "taskGroup", Direction: "asc"}, []string{"b", "a"}},
 		{"version asc", allocationSort{Column: "version", Direction: "asc"}, []string{"b", "a"}},
 		{"version desc", allocationSort{Column: "version", Direction: "desc"}, []string{"a", "b"}},
-		{"uptime asc (smallest uptime = most recent submit first)", allocationSort{Column: "uptime", Direction: "asc"}, []string{"a", "b"}},
-		{"uptime desc", allocationSort{Column: "uptime", Direction: "desc"}, []string{"b", "a"}},
+		{"lastModified asc (smallest lastModified = most recent submit first)", allocationSort{Column: "lastModified", Direction: "asc"}, []string{"a", "b"}},
+		{"lastModified desc", allocationSort{Column: "lastModified", Direction: "desc"}, []string{"b", "a"}},
 		{"invalid column, unsorted", allocationSort{Column: "bogus", Direction: "asc"}, []string{"b", "a"}},
 		{"invalid direction, unsorted", allocationSort{Column: "id", Direction: "sideways"}, []string{"b", "a"}},
 		{"empty sort, unsorted", allocationSort{}, []string{"b", "a"}},

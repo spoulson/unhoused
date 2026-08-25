@@ -18,7 +18,7 @@ these values are never returned in API responses.
 
   - `404` — unknown profile / job / allocation
   - `502` — Nomad API unreachable or returned an error
-- Timestamps: RFC 3339 strings. Durations (uptime): whole seconds as integers.
+- Timestamps: RFC 3339 strings. Durations (last modified): whole seconds as integers.
 - The frontend polls job status endpoints on an interval (default 5s per functional requirements) rather
   than the backend pushing updates — no websocket/SSE is specified.
 
@@ -76,7 +76,7 @@ Query parameters (all optional):
 | `desired`  | Exact match against allocation desired status                         | (none — no filter) |
 | `page`     | 1-based page number. Invalid/non-positive values fall back to the default. | `1` |
 | `pageSize` | Rows per page. Invalid/non-positive values fall back to the default; clamped to a maximum of `500`. | `50` |
-| `sort`     | Column to sort the allocation table by. One of `id`, `node`, `status`, `desired`, `taskGroup`, `version`, `uptime`. | (none — Nomad's returned order) |
+| `sort`     | Column to sort the allocation table by. One of `id`, `node`, `status`, `desired`, `taskGroup`, `version`, `lastModified`. | (none — Nomad's returned order) |
 | `dir`      | Sort direction: `asc` or `desc`. Required alongside `sort` — either missing, or either param invalid, leaves the table unsorted. | (none) |
 
 All parameters combine with AND — e.g. `q=node1&status=running` returns only allocations matching both.
@@ -89,7 +89,7 @@ Response `200`:
   "versionGroups": [
     {
       "version": 3,
-      "newestAllocationUptimeSeconds": 1234,
+      "newestAllocationLastModifiedSeconds": 1234,
       "statusCounts": { "running": 5, "pending": 1, "failed": 0, "complete": 0, "lost": 0 }
     }
   ],
@@ -104,7 +104,7 @@ Response `200`:
       "desiredStatus": "run",
       "taskGroup": "web",
       "version": 3,
-      "uptimeSeconds": 1234,
+      "lastModifiedSeconds": 1234,
       "ports": [
         {
           "label": "http",
@@ -135,10 +135,10 @@ Response `200`:
   filters are currently active. `status`/`desired` aren't included since those are Nomad's fixed enums.
 - `allocations` holds only the current page (`pageSize` items or fewer on the last page) of the filtered,
   sorted allocation list, in the same order as before pagination was introduced.
-- `uptimeSeconds` (per allocation) and `newestAllocationUptimeSeconds` (per version group) are both
-  `now - submitTime`, where `submitTime` is the Nomad job version's `SubmitTime` (Nomad's per-version
+- `lastModifiedSeconds` (per allocation) and `newestAllocationLastModifiedSeconds` (per version group) are
+  both `now - submitTime`, where `submitTime` is the Nomad job version's `SubmitTime` (Nomad's per-version
   `GET /v1/job/{id}/versions` data) matching that allocation's `version` — not each allocation's own
-  `CreateTime`. All allocations within a version group therefore share the same uptime.
+  `CreateTime`. All allocations within a version group therefore share the same last-modified value.
 - `ports` includes one entry per network port defined on the allocation. `url` (`http://<ip>:<port>`) is
   always present. `nodeUrl` is present only when `label == "http"`, and holds the environment/region-derived
   hostname link from the functional requirements — computed server-side so the frontend doesn't need to

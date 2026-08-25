@@ -173,15 +173,15 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 			}
 
 			allocations[i] = allocationDTO{
-				ID:            stub.ID,
-				NodeName:      stub.NodeName,
-				NodeIP:        allocPorts.NodeIP,
-				ClientStatus:  stub.ClientStatus,
-				DesiredStatus: stub.DesiredStatus,
-				TaskGroup:     stub.TaskGroup,
-				Version:       stub.JobVersion,
-				UptimeSeconds: uptimeSeconds(submitTimes[stub.JobVersion], now),
-				Ports:         ports,
+				ID:                  stub.ID,
+				NodeName:            stub.NodeName,
+				NodeIP:              allocPorts.NodeIP,
+				ClientStatus:        stub.ClientStatus,
+				DesiredStatus:       stub.DesiredStatus,
+				TaskGroup:           stub.TaskGroup,
+				Version:             stub.JobVersion,
+				LastModifiedSeconds: lastModifiedSeconds(submitTimes[stub.JobVersion], now),
+				Ports:               ports,
 			}
 
 			return nil
