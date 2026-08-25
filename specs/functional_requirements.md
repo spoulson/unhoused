@@ -45,16 +45,25 @@ its specific fields/columns, and its defaults — this section describes the sha
 
 - Profile page lists the available Nomad jobs.
 - User clicks a job to view the job status page.
+- Page title is "Profile: `<profile name>`", shown both as the browser tab title and as the page's H1
+  heading.
 - Search matches job name.
 - Sortable columns: Job, Submitted. Default sort is Submitted, descending.
 - URL query params: `q` (search), `sort`/`dir` (sort column/direction), `page`/`pageSize` (pagination).
 
 ## Job Status Page
 
+- Page title is "Job: `<job id>`", shown both as the browser tab title and as the page's H1 heading
+  (alongside the running/stopped/etc. indicator described next).
 - Show indicator whether job status is currently running, stopped, etc.
 - List the counts of allocations by version, then by status.
   - Status refers to running, stopped, etc.
   - Also shows uptime of newest allocation in the group.
+  - The version list uses the same pagination control described above (Previous/Next, adjustable page
+    size, "Showing X–Y of Z versions" summary), but with its own page size options (5/10/25/50) and
+    defaults to 5 per page.
+  - Clicking a status count (e.g. "✓ Running 2") sets the Allocations table's version and status filters to
+    that version and status, replacing whatever filters were previously set.
 - Below the status groups is the full list of allocations in tabular layout.  This includes
 fields:
   - Allocation ID
@@ -81,6 +90,7 @@ fields:
 - Sortable columns: Allocation, Node, Status, Desired, Task Group, Version, Uptime (Ports is not sortable).
   Default sort is Uptime, ascending (most recently started allocations first).
 - URL query params: `q` (search), `taskGroup`/`version`/`node`/`status`/`desired` (filters), `sort`/`dir`
-  (sort column/direction), `page`/`pageSize` (pagination).
+  (sort column/direction), `page`/`pageSize` (allocation table pagination), `versionPage`/`versionPageSize`
+  (version list pagination).
 - Page updates periodically based on configuration.
   - Default every 5 seconds.

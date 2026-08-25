@@ -4,6 +4,7 @@ import { useJobs } from '../api/queries'
 import type { JobListItem } from '../api/types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import styles from './ProfilePage.module.css'
 
 type SortColumn = 'name' | 'submitTime'
@@ -163,6 +164,8 @@ function sortJobs(jobs: JobListItem[], sort: SortState): JobListItem[] {
 
 export function ProfilePage() {
   const { profileName } = useParams<{ profileName: string }>()
+  const pageTitle = `Profile: ${profileName ?? ''}`
+  useDocumentTitle(pageTitle)
   const { data, isLoading, error } = useJobs(profileName ?? '')
   const [, setSearchParams] = useSearchParams()
 
@@ -222,7 +225,7 @@ export function ProfilePage() {
 
   return (
     <div>
-      <h1>{profileName}</h1>
+      <h1>{pageTitle}</h1>
       {data?.jobs.length === 0 ? (
         <p>No jobs found.</p>
       ) : (

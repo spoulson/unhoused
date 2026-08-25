@@ -7,6 +7,7 @@ import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
 import { formatDuration } from '../lib/duration'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import styles from './JobStatusPage.module.css'
 
 // Order shown in the Versions summary badges (running first, as the state that matters most) — not the
@@ -34,6 +35,9 @@ const FILTER_KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[]
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200]
 const DEFAULT_PAGE_SIZE = 50
+
+const VERSION_PAGE_SIZE_OPTIONS = [5, 10, 25, 50]
+const DEFAULT_VERSION_PAGE_SIZE = 5
 
 type SortColumn = 'id' | 'node' | 'status' | 'desired' | 'taskGroup' | 'version' | 'uptime'
 type SortDirection = 'asc' | 'desc' | 'none'
@@ -108,36 +112,59 @@ function parsePageSize(searchParams: URLSearchParams): number {
   return PAGE_SIZE_OPTIONS.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE
 }
 
-/** Builds the full URL query string for a given (search, filters, sort, page, pageSize) state — defaults are omitted. */
-function buildParams(
-  search: string,
-  filters: Filters,
-  sort: SortState,
-  page: number,
-  pageSize: number,
-): URLSearchParams {
+/** Reads the Versions section's page number from the URL, falling back to 1 when absent or invalid. */
+function parseVersionPage(searchParams: URLSearchParams): number {
+  const page = Number(searchParams.get('versionPage'))
+  return Number.isInteger(page) && page > 0 ? page : 1
+}
+
+/** Reads the Versions section's page size from the URL, falling back to the default when absent or invalid. */
+function parseVersionPageSize(searchParams: URLSearchParams): number {
+  const pageSize = Number(searchParams.get('versionPageSize'))
+  return VERSION_PAGE_SIZE_OPTIONS.includes(pageSize) ? pageSize : DEFAULT_VERSION_PAGE_SIZE
+}
+
+interface PageState {
+  search: string
+  filters: Filters
+  sort: SortState
+  page: number
+  pageSize: number
+  versionPage: number
+  versionPageSize: number
+}
+
+/** Builds the full URL query string for a given page state — defaults are omitted. */
+function buildParams(state: PageState): URLSearchParams {
   const params = new URLSearchParams()
 
-  if (search !== '') {
-    params.set('q', search)
+  if (state.search !== '') {
+    params.set('q', state.search)
   }
 
   for (const key of FILTER_KEYS) {
-    if (filters[key] !== '') {
-      params.set(key, filters[key])
+    if (state.filters[key] !== '') {
+      params.set(key, state.filters[key])
     }
   }
 
-  if (sort.column !== DEFAULT_SORT.column || sort.direction !== DEFAULT_SORT.direction) {
-    params.set('sort', sort.column)
-    params.set('dir', sort.direction)
+  if (state.sort.column !== DEFAULT_SORT.column || state.sort.direction !== DEFAULT_SORT.direction) {
+    params.set('sort', state.sort.column)
+    params.set('dir', state.sort.direction)
   }
 
-  if (page !== 1) {
-    params.set('page', String(page))
+  if (state.page !== 1) {
+    params.set('page', String(state.page))
   }
-  if (pageSize !== DEFAULT_PAGE_SIZE) {
-    params.set('pageSize', String(pageSize))
+  if (state.pageSize !== DEFAULT_PAGE_SIZE) {
+    params.set('pageSize', String(state.pageSize))
+  }
+
+  if (state.versionPage !== 1) {
+    params.set('versionPage', String(state.versionPage))
+  }
+  if (state.versionPageSize !== DEFAULT_VERSION_PAGE_SIZE) {
+    params.set('versionPageSize', String(state.versionPageSize))
   }
 
   return params
@@ -192,11 +219,12 @@ interface PaginationProps {
   page: number
   totalPages: number
   pageSize: number
+  pageSizeOptions: number[]
   onPageChange: (page: number) => void
   onPageSizeChange: (pageSize: number) => void
 }
 
-function Pagination({ page, totalPages, pageSize, onPageChange, onPageSizeChange }: PaginationProps) {
+function Pagination({ page, totalPages, pageSize, pageSizeOptions, onPageChange, onPageSizeChange }: PaginationProps) {
   return (
     <div className={styles.pagination}>
       <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
@@ -211,7 +239,7 @@ function Pagination({ page, totalPages, pageSize, onPageChange, onPageSizeChange
       <label className={styles.pageSize}>
         <span>Per page</span>
         <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))}>
-          {PAGE_SIZE_OPTIONS.map((size) => (
+          {pageSizeOptions.map((size) => (
             <option key={size} value={size}>
               {size}
             </option>
@@ -257,6 +285,8 @@ function PortLinks({ ports }: { ports: Port[] }) {
 
 export function JobStatusPage() {
   const { profileName, jobId } = useParams<{ profileName: string; jobId: string }>()
+  const pageTitle = `Job: ${jobId ?? ''}`
+  useDocumentTitle(pageTitle)
   const [, setSearchParams] = useSearchParams()
 
   // filters/page/pageSize live in local state (initialized once from the URL on mount) rather than being
@@ -268,6 +298,10 @@ export function JobStatusPage() {
   const [sort, setSort] = useState<SortState>(() => parseSort(new URLSearchParams(window.location.search)))
   const [page, setPage] = useState(() => parsePage(new URLSearchParams(window.location.search)))
   const [pageSize, setPageSize] = useState(() => parsePageSize(new URLSearchParams(window.location.search)))
+  const [versionPage, setVersionPage] = useState(() => parseVersionPage(new URLSearchParams(window.location.search)))
+  const [versionPageSize, setVersionPageSize] = useState(() =>
+    parseVersionPageSize(new URLSearchParams(window.location.search)),
+  )
 
   const { data, isLoading, error } = useJobStatus(profileName ?? '', jobId ?? '', {
     q: search,
@@ -285,14 +319,30 @@ export function JobStatusPage() {
   function handleSearchChange(value: string) {
     setSearch(value)
     setPage(1)
-    setSearchParams(buildParams(value, filters, sort, 1, pageSize), { replace: true })
+    setSearchParams(buildParams({ search: value, filters, sort, page: 1, pageSize, versionPage, versionPageSize }), {
+      replace: true,
+    })
   }
 
   function setFilter(key: keyof Filters, value: string) {
     const nextFilters = { ...filters, [key]: value }
     setFilters(nextFilters)
     setPage(1)
-    setSearchParams(buildParams(search, nextFilters, sort, 1, pageSize), { replace: true })
+    setSearchParams(
+      buildParams({ search, filters: nextFilters, sort, page: 1, pageSize, versionPage, versionPageSize }),
+      { replace: true },
+    )
+  }
+
+  /** Clicking a status count in the Versions section filters the Allocations table to that version+status. */
+  function handleVersionStatusClick(version: number, status: ClientStatus) {
+    const nextFilters: Filters = { ...filters, version: String(version), status }
+    setFilters(nextFilters)
+    setPage(1)
+    setSearchParams(
+      buildParams({ search, filters: nextFilters, sort, page: 1, pageSize, versionPage, versionPageSize }),
+      { replace: true },
+    )
   }
 
   function handleSortClick(column: SortColumn) {
@@ -300,18 +350,43 @@ export function JobStatusPage() {
       sort.column === column ? { column, direction: nextDirection(sort.direction) } : { column, direction: 'asc' }
     setSort(next)
     setPage(1)
-    setSearchParams(buildParams(search, filters, next, 1, pageSize), { replace: true })
+    setSearchParams(buildParams({ search, filters, sort: next, page: 1, pageSize, versionPage, versionPageSize }), {
+      replace: true,
+    })
   }
 
   function handlePageChange(nextPage: number) {
     setPage(nextPage)
-    setSearchParams(buildParams(search, filters, sort, nextPage, pageSize), { replace: true })
+    setSearchParams(
+      buildParams({ search, filters, sort, page: nextPage, pageSize, versionPage, versionPageSize }),
+      { replace: true },
+    )
   }
 
   function handlePageSizeChange(size: number) {
     setPageSize(size)
     setPage(1)
-    setSearchParams(buildParams(search, filters, sort, 1, size), { replace: true })
+    setSearchParams(
+      buildParams({ search, filters, sort, page: 1, pageSize: size, versionPage, versionPageSize }),
+      { replace: true },
+    )
+  }
+
+  function handleVersionPageChange(nextVersionPage: number) {
+    setVersionPage(nextVersionPage)
+    setSearchParams(
+      buildParams({ search, filters, sort, page, pageSize, versionPage: nextVersionPage, versionPageSize }),
+      { replace: true },
+    )
+  }
+
+  function handleVersionPageSizeChange(size: number) {
+    setVersionPageSize(size)
+    setVersionPage(1)
+    setSearchParams(
+      buildParams({ search, filters, sort, page, pageSize, versionPage: 1, versionPageSize: size }),
+      { replace: true },
+    )
   }
 
   function handleClearFilters() {
@@ -319,7 +394,18 @@ export function JobStatusPage() {
     setFilters(EMPTY_FILTERS)
     setSort(DEFAULT_SORT)
     setPage(1)
-    setSearchParams(buildParams('', EMPTY_FILTERS, DEFAULT_SORT, 1, pageSize), { replace: true })
+    setSearchParams(
+      buildParams({
+        search: '',
+        filters: EMPTY_FILTERS,
+        sort: DEFAULT_SORT,
+        page: 1,
+        pageSize,
+        versionPage,
+        versionPageSize,
+      }),
+      { replace: true },
+    )
   }
 
   if (isLoading) {
@@ -342,15 +428,30 @@ export function JobStatusPage() {
   const noAllocationsAtAll = data.pagination.totalItems === 0 && !hasActiveFilters
   const noAllocationsMatchFilters = data.pagination.totalItems === 0 && hasActiveFilters
 
+  const totalVersionPages = Math.max(1, Math.ceil(data.versionGroups.length / versionPageSize))
+  // Clamp rather than reset, so a stale page number can't point past the end of what's available.
+  const effectiveVersionPage = Math.min(versionPage, totalVersionPages)
+  const paginatedVersionGroups = data.versionGroups.slice(
+    (effectiveVersionPage - 1) * versionPageSize,
+    effectiveVersionPage * versionPageSize,
+  )
+
   return (
     <div>
       <h1 className={styles.title}>
-        {data.job.name} <StatusBadge status={data.job.status} />
+        {pageTitle} <StatusBadge status={data.job.status} />
       </h1>
 
       <h2>Versions</h2>
+      {data.versionGroups.length > 0 && (
+        <p className={styles.filterSummary}>
+          Showing {(effectiveVersionPage - 1) * versionPageSize + 1}–
+          {Math.min(effectiveVersionPage * versionPageSize, data.versionGroups.length)} of{' '}
+          {data.versionGroups.length} versions
+        </p>
+      )}
       <div className={styles.versionGroups}>
-        {data.versionGroups.map((group) => (
+        {paginatedVersionGroups.map((group) => (
           <div key={group.version} className={styles.versionGroup}>
             <div className={styles.versionHeader}>
               <span>Version {group.version}</span>
@@ -360,14 +461,30 @@ export function JobStatusPage() {
             </div>
             <div className={styles.statusCounts}>
               {CLIENT_STATUSES.filter((status) => group.statusCounts[status] > 0).map((status) => (
-                <span key={status} className={styles.statusCount}>
+                <button
+                  key={status}
+                  type="button"
+                  className={styles.statusCount}
+                  onClick={() => handleVersionStatusClick(group.version, status)}
+                  title={`Filter allocations to version ${group.version}, ${status}`}
+                >
                   <StatusBadge status={status} /> {group.statusCounts[status]}
-                </span>
+                </button>
               ))}
             </div>
           </div>
         ))}
       </div>
+      {data.versionGroups.length > 0 && (
+        <Pagination
+          page={effectiveVersionPage}
+          totalPages={totalVersionPages}
+          pageSize={versionPageSize}
+          pageSizeOptions={VERSION_PAGE_SIZE_OPTIONS}
+          onPageChange={handleVersionPageChange}
+          onPageSizeChange={handleVersionPageSizeChange}
+        />
+      )}
 
       <h2>Allocations</h2>
       {noAllocationsAtAll ? (
@@ -480,6 +597,7 @@ export function JobStatusPage() {
                 page={data.pagination.page}
                 totalPages={data.pagination.totalPages}
                 pageSize={pageSize}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
                 onPageChange={handlePageChange}
                 onPageSizeChange={handlePageSizeChange}
               />

@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom'
 import { useProfiles } from '../api/queries'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import styles from './HomePage.module.css'
 
 export function HomePage() {
+  useDocumentTitle('unhoused')
   const { data, isLoading, error } = useProfiles()
 
   if (isLoading) {
