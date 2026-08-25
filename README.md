@@ -11,7 +11,8 @@ needing Nomad's own UI or CLI.
 ### Docker (recommended)
 
 ```
-docker compose up --build
+make docker
+docker compose up
 ```
 
 Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy
