@@ -10,3 +10,8 @@ $(GOLANGCI_LINT):
 .PHONY: dev
 dev:
 	docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
+
+.PHONY: docker
+docker:
+	docker build -t unhoused-backend:latest .
+	docker build -t unhoused-frontend:latest ./frontend

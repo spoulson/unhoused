@@ -36,6 +36,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `make dev` — dev mode: frontend runs Vite's dev server bind-mounted to `frontend/`, so source edits show
   up on a browser reload without a rebuild (see [specs/architecture.md](specs/architecture.md)'s Docker Dev
   Mode section). Equivalent to `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build`.
+- `make docker` — builds the production backend and frontend images, tagged `unhoused-backend:latest` and
+  `unhoused-frontend:latest` respectively.
 
 ## Architecture
 
