@@ -28,14 +28,11 @@ make dev
 
 ### Running locally without Docker
 
-Backend (repo root):
+Backend (repo root) — set up a config file first, see [Configuration](#configuration) below, then:
 
 ```
-go run . -c config.example.yaml
+go run . -c config.yaml
 ```
-
-Copy `config.example.yaml` to `config.yaml` and fill in your own Nomad URL(s) and token(s) first — see
-[Configuration](#configuration) below.
 
 Frontend (`frontend/`), in a separate terminal:
 
@@ -50,16 +47,49 @@ together.
 
 ## Configuration
 
-The backend takes a YAML config file via `-c <file>`. See [config.example.yaml](config.example.yaml) for
-a starting point and [specs/configuration.md](specs/configuration.md) for the full reference. In brief:
+The backend takes a YAML config file via `-c <file>`. See [specs/configuration.md](specs/configuration.md)
+for the full reference.
 
-- Service settings: public URL, listen port (default `3001`), and the Job Status page's refresh interval.
-- One or more **profiles**, each describing a Nomad environment: name, environment (`staging` /
-  `production`), region, Nomad URL, and Nomad API token (plaintext).
+### Setup
+
+1. Copy the example file and edit it:
+
+   ```
+   cp config.example.yaml config.yaml
+   ```
+
+2. Fill in a Nomad URL and API token for each environment you want to monitor (`profiles` below).
+3. Run the backend against it:
+
+   ```
+   go run . -c config.yaml
+   ```
+
+`config.yaml` is gitignored — the repo only tracks `config.example.yaml`, which ships with placeholder
+values and no real token. Never commit a config file containing a live Nomad token.
+
+### Fields
+
+Service settings, top-level:
+
+| Field | Meaning | Default |
+|---|---|---|
+| `httpPublicUrl` | Public URL used for links generated within the app | `http://localhost` |
+| `listenPort` | REST API listen port | `3001` |
+| `refreshIntervalSeconds` | Poll interval the frontend uses on the Job Status page | — |
+
+`profiles`: one or more entries, each describing a Nomad environment to monitor:
+
+| Field | Meaning |
+|---|---|
+| `name` | Profile identifier, shown in the UI |
+| `environment` | `staging` or `production` |
+| `region` | `us-west1`, `us-east4`, `europe-west1`, or `ause1` |
+| `nomadUrl` | Nomad HTTP API URL (usually port `4646`) |
+| `nomadToken` | Nomad API token, in plaintext |
 
 Nomad tokens are only ever held by the backend — the frontend talks to the backend's REST API, never to
-Nomad directly. Don't commit a config file containing a real token; the repo's `.gitignore` excludes any
-`config*.yaml` other than `config.example.yaml`.
+Nomad directly.
 
 ## Architecture
 
