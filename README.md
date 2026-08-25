@@ -2,11 +2,14 @@
 
 An alternative web UI for monitoring [HashiCorp Nomad](https://www.nomadproject.io/) job and allocation status.
 
-The backend (Go) polls the Nomad HTTP API and serves a REST API; the frontend (React) consumes it. Point
-`unhoused` at one or more Nomad environments (profiles) and browse jobs, versions, and allocations without
-needing Nomad's own UI or CLI.
+The backend (Go) polls the Nomad HTTP API and serves a REST API; the frontend (React) consumes it. Point `unhoused` at
+one or more Nomad environments (profiles) and browse jobs, versions, and allocations without needing Nomad's own UI or
+CLI.
 
 ## Quick start
+
+First, create a backend configuration by copying `config.example.yaml` to `config.yaml`, then edit to setup your Nomad
+profiles.
 
 ### Docker (recommended)
 
@@ -15,8 +18,8 @@ make docker
 docker compose up
 ```
 
-Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy
-together, using `config.example.yaml` (placeholder Nomad URLs/tokens) as the backend's config.
+Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy together, using
+`config.example.yaml` (placeholder Nomad URLs/tokens) as the backend's config.
 
 For live-reloading local iteration (source edits apply without a rebuild):
 
@@ -42,13 +45,12 @@ npm install
 npm run dev
 ```
 
-The dev server proxies `/api` to `http://localhost:3001`, the backend's default port, so run both
-together.
+The dev server proxies `/api` to `http://localhost:3001`, the backend's default port, so run both together.
 
 ## Configuration
 
-The backend takes a YAML config file via `-c <file>`. See [specs/configuration.md](specs/configuration.md)
-for the full reference.
+The backend takes a YAML config file via `-c <file>`. See [specs/configuration.md](specs/configuration.md) for the full
+reference.
 
 ### Setup
 
@@ -65,8 +67,8 @@ for the full reference.
    go run . -c config.yaml
    ```
 
-`config.yaml` is gitignored — the repo only tracks `config.example.yaml`, which ships with placeholder
-values and no real token. Never commit a config file containing a live Nomad token.
+`config.yaml` is gitignored — the repo only tracks `config.example.yaml`, which ships with placeholder values and no
+real token. Never commit a config file containing a live Nomad token.
 
 ### Fields
 
@@ -88,21 +90,18 @@ Service settings, top-level:
 | `nomadUrl` | Nomad HTTP API URL (usually port `4646`) |
 | `nomadToken` | Nomad API token, in plaintext |
 
-Nomad tokens are only ever held by the backend — the frontend talks to the backend's REST API, never to
-Nomad directly.
+Nomad tokens are only ever held by the backend — the frontend talks to the backend's REST API, never to Nomad directly.
 
 ## Architecture
 
-See [specs/architecture.md](specs/architecture.md) for the full picture, including the Docker Compose
-setup. Summary:
+See [specs/architecture.md](specs/architecture.md) for the full picture, including the Docker Compose setup. Summary:
 
-- **Frontend**: React + TypeScript + Vite, React Router, TanStack Query. Plain CSS Modules (Gruvbox-based
-  theme, see [specs/style.md](specs/style.md)).
+- **Frontend**: React + TypeScript + Vite, React Router, TanStack Query. Plain CSS Modules (Gruvbox-based theme, see
+  [specs/style.md](specs/style.md)).
 - **Backend**: Go (module `unhoused`), talks to Nomad via `github.com/hashicorp/nomad/api`.
-- **Reverse proxy**: [Caddy](https://caddyserver.com) is the single public entry point in the Docker
-  environment, routing `/api/*` to the backend and everything else to the frontend.
-- **Auth**: none — access control, if needed, is expected to be handled outside the app (e.g. network
-  placement).
+- **Reverse proxy**: [Caddy](https://caddyserver.com) is the single public entry point in the Docker environment,
+  routing `/api/*` to the backend and everything else to the frontend.
+- **Auth**: none — access control, if needed, is expected to be handled outside the app (e.g. network placement).
 
 ## Development
 
