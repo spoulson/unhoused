@@ -61,7 +61,25 @@ Errors: `404` if `{profile}` doesn't match a configured profile; `502` if the No
 
 ### `GET /api/profiles/{profile}/jobs/{jobId}`
 
-Job Status Page data: allocation counts grouped by version then status, plus the full allocation table.
+Job Status Page data: allocation counts grouped by version then status, plus a filtered/paginated page of
+the allocation table.
+
+Query parameters (all optional):
+
+| Param      | Meaning                                                              | Default |
+|------------|-----------------------------------------------------------------------|---------|
+| `q`        | Case-insensitive substring match against allocation ID, node name, or node IP | (none — no filter) |
+| `taskGroup`| Exact match against allocation task group                            | (none — no filter) |
+| `version`  | Exact match against allocation job version (compared as a string)     | (none — no filter) |
+| `node`     | Exact match against allocation node name                              | (none — no filter) |
+| `status`   | Exact match against allocation client status                          | (none — no filter) |
+| `desired`  | Exact match against allocation desired status                         | (none — no filter) |
+| `page`     | 1-based page number. Invalid/non-positive values fall back to the default. | `1` |
+| `pageSize` | Rows per page. Invalid/non-positive values fall back to the default; clamped to a maximum of `500`. | `50` |
+| `sort`     | Column to sort the allocation table by. One of `id`, `node`, `status`, `desired`, `taskGroup`, `version`, `uptime`. | (none — Nomad's returned order) |
+| `dir`      | Sort direction: `asc` or `desc`. Required alongside `sort` — either missing, or either param invalid, leaves the table unsorted. | (none) |
+
+All parameters combine with AND — e.g. `q=node1&status=running` returns only allocations matching both.
 
 Response `200`:
 
@@ -75,6 +93,8 @@ Response `200`:
       "statusCounts": { "running": 5, "pending": 1, "failed": 0, "complete": 0, "lost": 0 }
     }
   ],
+  "pagination": { "page": 1, "pageSize": 50, "totalItems": 137, "totalPages": 3 },
+  "filterOptions": { "taskGroups": ["web"], "versions": [3, 2], "nodes": ["node1", "node2"] },
   "allocations": [
     {
       "id": "3f9a1e2b-...",
@@ -102,7 +122,19 @@ Response `200`:
 - `job.status` is the top-level indicator for the Job Status Page header: one of `running`, `pending`,
   `stopped`, or `dead`.
 - `versionGroups` is sorted newest version first; `statusCounts` keys are the Nomad client statuses
-  (`running`, `pending`, `failed`, `complete`, `lost`).
+  (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
+  unaffected by the filter query parameters above — it represents overall job health, not the filtered
+  table view.
+- `pagination.page`/`pagination.pageSize` echo the effective values used after applying the defaults/clamps
+  above. `totalItems`/`totalPages` are computed from the **filtered** allocation set. If the requested
+  `page` is beyond `totalPages` (e.g. a filter change shrank the result set), the response clamps to the
+  last valid page instead of returning an empty page — `pagination.page` reflects the page actually
+  returned.
+- `filterOptions` lists the distinct `taskGroup`/`version`/`nodeName` values across **all** of the job's
+  allocations (unfiltered), so filter dropdowns can always offer every possible value regardless of which
+  filters are currently active. `status`/`desired` aren't included since those are Nomad's fixed enums.
+- `allocations` holds only the current page (`pageSize` items or fewer on the last page) of the filtered,
+  sorted allocation list, in the same order as before pagination was introduced.
 - `uptimeSeconds` (per allocation) and `newestAllocationUptimeSeconds` (per version group) are both
   `now - submitTime`, where `submitTime` is the Nomad job version's `SubmitTime` (Nomad's per-version
   `GET /v1/job/{id}/versions` data) matching that allocation's `version` — not each allocation's own

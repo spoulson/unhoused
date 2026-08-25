@@ -63,8 +63,23 @@ type allocationDTO struct {
 	Ports         []portDTO `json:"ports"`
 }
 
+type paginationDTO struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"pageSize"`
+	TotalItems int `json:"totalItems"`
+	TotalPages int `json:"totalPages"`
+}
+
+type filterOptionsDTO struct {
+	TaskGroups []string `json:"taskGroups"`
+	Versions   []uint64 `json:"versions"`
+	Nodes      []string `json:"nodes"`
+}
+
 type jobStatusResponse struct {
 	Job           jobDTO            `json:"job"`
 	VersionGroups []versionGroupDTO `json:"versionGroups"`
+	Pagination    paginationDTO     `json:"pagination"`
+	FilterOptions filterOptionsDTO  `json:"filterOptions"`
 	Allocations   []allocationDTO   `json:"allocations"`
 }

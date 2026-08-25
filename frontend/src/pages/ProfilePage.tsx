@@ -17,6 +17,9 @@ const SORT_CYCLE: SortDirection[] = ['asc', 'desc', 'none']
 
 const DEFAULT_SORT: SortState = { column: 'submitTime', direction: 'desc' }
 
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200]
+const DEFAULT_PAGE_SIZE = 50
+
 function nextDirection(direction: SortDirection): SortDirection {
   return SORT_CYCLE[(SORT_CYCLE.indexOf(direction) + 1) % SORT_CYCLE.length]
 }
@@ -52,8 +55,20 @@ function parseSort(searchParams: URLSearchParams): SortState {
   return DEFAULT_SORT
 }
 
-/** Builds the full URL query string for a given (search, sort) state — defaults are omitted. */
-function buildParams(search: string, sort: SortState): URLSearchParams {
+/** Reads the page number from the URL, falling back to 1 when absent or invalid. */
+function parsePage(searchParams: URLSearchParams): number {
+  const page = Number(searchParams.get('page'))
+  return Number.isInteger(page) && page > 0 ? page : 1
+}
+
+/** Reads the page size from the URL, falling back to the default when absent or not one of the offered sizes. */
+function parsePageSize(searchParams: URLSearchParams): number {
+  const pageSize = Number(searchParams.get('pageSize'))
+  return PAGE_SIZE_OPTIONS.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE
+}
+
+/** Builds the full URL query string for a given (search, sort, page, pageSize) state — defaults are omitted. */
+function buildParams(search: string, sort: SortState, page: number, pageSize: number): URLSearchParams {
   const params = new URLSearchParams()
 
   if (search !== '') {
@@ -63,6 +78,13 @@ function buildParams(search: string, sort: SortState): URLSearchParams {
   if (sort.column !== DEFAULT_SORT.column || sort.direction !== DEFAULT_SORT.direction) {
     params.set('sort', sort.column)
     params.set('dir', sort.direction)
+  }
+
+  if (page !== 1) {
+    params.set('page', String(page))
+  }
+  if (pageSize !== DEFAULT_PAGE_SIZE) {
+    params.set('pageSize', String(pageSize))
   }
 
   return params
@@ -90,6 +112,40 @@ function SortableHeader({ column, label, sort, onClick }: SortableHeaderProps) {
   )
 }
 
+interface PaginationProps {
+  page: number
+  totalPages: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
+}
+
+function Pagination({ page, totalPages, pageSize, onPageChange, onPageSizeChange }: PaginationProps) {
+  return (
+    <div className={styles.pagination}>
+      <button type="button" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
+        Previous
+      </button>
+      <span>
+        Page {page} of {totalPages}
+      </span>
+      <button type="button" onClick={() => onPageChange(page + 1)} disabled={page >= totalPages}>
+        Next
+      </button>
+      <label className={styles.pageSize}>
+        <span>Per page</span>
+        <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))}>
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
 function sortJobs(jobs: JobListItem[], sort: SortState): JobListItem[] {
   if (sort.direction === 'none') {
     return jobs
@@ -110,13 +166,10 @@ export function ProfilePage() {
   const { data, isLoading, error } = useJobs(profileName ?? '')
   const [, setSearchParams] = useSearchParams()
 
-  // search/sort live in local state (initialized once from the URL on mount) rather than being derived
-  // fresh from useSearchParams() on every render: React Router's setSearchParams functional updater does
-  // not reliably see the result of the previous call across rapid successive calls in the same tick (e.g.
-  // fast typing), so merging against its `prev` can silently drop keystrokes. Local state batches
-  // correctly; the full URL is rebuilt from it (not merged) on every change.
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
   const [sort, setSort] = useState<SortState>(() => parseSort(new URLSearchParams(window.location.search)))
+  const [page, setPage] = useState(() => parsePage(new URLSearchParams(window.location.search)))
+  const [pageSize, setPageSize] = useState(() => parsePageSize(new URLSearchParams(window.location.search)))
 
   const filteredJobs = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -128,16 +181,35 @@ export function ProfilePage() {
 
   const sortedJobs = useMemo(() => sortJobs(filteredJobs, sort), [filteredJobs, sort])
 
+  const totalPages = Math.max(1, Math.ceil(sortedJobs.length / pageSize))
+  // Clamp rather than reset on every render, so a stale page number (e.g. from a shrunk result set)
+  // can't point past the end of what's actually available.
+  const effectivePage = Math.min(page, totalPages)
+  const paginatedJobs = sortedJobs.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
+
   function handleSearchChange(value: string) {
     setSearch(value)
-    setSearchParams(buildParams(value, sort), { replace: true })
+    setPage(1)
+    setSearchParams(buildParams(value, sort, 1, pageSize), { replace: true })
   }
 
   function handleSortClick(column: SortColumn) {
     const next: SortState =
       sort.column === column ? { column, direction: nextDirection(sort.direction) } : { column, direction: 'asc' }
     setSort(next)
-    setSearchParams(buildParams(search, next), { replace: true })
+    setPage(1)
+    setSearchParams(buildParams(search, next, 1, pageSize), { replace: true })
+  }
+
+  function handlePageChange(nextPage: number) {
+    setPage(nextPage)
+    setSearchParams(buildParams(search, sort, nextPage, pageSize), { replace: true })
+  }
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setPage(1)
+    setSearchParams(buildParams(search, sort, 1, size), { replace: true })
   }
 
   if (isLoading) {
@@ -166,26 +238,39 @@ export function ProfilePage() {
           {sortedJobs.length === 0 ? (
             <p>No jobs match "{search}".</p>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortableHeader column="name" label="Job" sort={sort} onClick={handleSortClick} />
-                  <SortableHeader column="submitTime" label="Submitted" sort={sort} onClick={handleSortClick} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedJobs.map((job) => (
-                  <tr key={job.id}>
-                    <td>
-                      <Link to={`/profiles/${profileName}/jobs/${job.id}`} className="mono">
-                        {job.name}
-                      </Link>
-                    </td>
-                    <td>{new Date(job.submitTime).toLocaleString()}</td>
+            <>
+              <p className={styles.filterSummary}>
+                Showing {(effectivePage - 1) * pageSize + 1}–
+                {Math.min(effectivePage * pageSize, sortedJobs.length)} of {sortedJobs.length} jobs
+              </p>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <SortableHeader column="name" label="Job" sort={sort} onClick={handleSortClick} />
+                    <SortableHeader column="submitTime" label="Submitted" sort={sort} onClick={handleSortClick} />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>
+                        <Link to={`/profiles/${profileName}/jobs/${job.id}`} className="mono">
+                          {job.name}
+                        </Link>
+                      </td>
+                      <td>{new Date(job.submitTime).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination
+                page={effectivePage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </>
           )}
         </>
       )}

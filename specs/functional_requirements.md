@@ -7,21 +7,49 @@ High level functional requirements for Unhoused.
 - Home page starts with a profile selection, which are defined in configuration.
 - User clicks one of the available profiles.  Link opens the Profile Page.
 
+## Table UX: Search, Filter, Sort, and Pagination
+
+The Profile Page's Jobs table and the Job Status Page's Allocations table share one interaction pattern for
+searching, filtering, sorting, and paginating. Each page's section below lists which of these apply to it,
+its specific fields/columns, and its defaults — this section describes the shared mechanics once.
+
+- **Search**: a single text box above the table filters rows to those where one or more designated fields
+  contain the search text, case-insensitive, substring match (not a full-word or prefix match).
+- **Filter dropdowns** (Job Status Page only): each dropdown narrows the table to rows with an exact value in
+  one field. Multiple active filters combine with AND. A dropdown's options are either derived from the
+  table's actual data (e.g. only task groups/versions/nodes currently present) or a fixed set of valid
+  values (e.g. status enums), and every dropdown's option list is itself sorted — see the Job Status Page
+  section for which fields sort ascending vs. descending.
+- **Sortable columns**: clicking a column name sorts the table by that column. An up/down arrow next to the
+  column name indicates the active sort direction. Clicking the same column again cycles it through
+  ascending → descending → unsorted (arrow removed), repeating; clicking a different column always starts
+  that column at ascending. Each table has its own default sort column/direction (see per-page defaults
+  below), applied whenever nothing else has been explicitly chosen — so on first load the default column
+  already shows its arrow. That default can itself be cycled: clicking its column steps it from its default
+  direction onward through the same ascending → descending → unsorted cycle as any other column.
+- **Pagination**: below the table, Previous/Next buttons (each disabled at the first/last page respectively)
+  step through pages; a "Showing X–Y of Z <items>" summary sits above the table; a "Per page" dropdown
+  (25/50/100/200, default 50) controls page size.
+- **Interactions reset paging**: changing the search text, any filter, the sort column/direction, or the
+  page size returns the view to page 1, so the user isn't left looking at a now out-of-range page.
+- **Clear filters** (Job Status Page only): a button appears next to the filter dropdowns whenever the
+  search text, any filter, or the sort deviates from its default, and resets all of them back to default in
+  one click.
+- **URL persistence**: search text, filter selections, sort state, and pagination state are all reflected in
+  the URL's query string, so reloading the page or opening a bookmarked/shared link restores the exact same
+  view. Default values (no search, no filter, default sort, page 1, default page size) are represented by
+  the *absence* of their query parameter rather than an explicit value, so the URL stays clean when nothing
+  has been changed from the default.
+
 ## Profile Page
 
-- Profile page lists the available Nomad jobs sorted newest to oldest.
+- Profile page lists the available Nomad jobs.
 - User clicks a job to view the job status page.
-- Text search box filters the job list to names containing the search text (case-insensitive substring
-  match).
-- Job and Submitted columns are sortable: an up/down arrow next to the column name indicates the active
-  sort. Clicking a column name toggles it through ascending → descending → unsorted (arrow removed),
-  repeating; clicking a different column starts it at ascending. Default is Submitted, descending.
-- Search text and sort state are reflected in the URL query string (`q`, `sort`, `dir`), so reloading the
-  page or opening a bookmarked/shared link restores the same search and sort. The default sort (Submitted,
-  descending) is the absence of `sort`/`dir` rather than an explicit value, keeping the URL clean when
-  nothing's been changed.
+- Search matches job name.
+- Sortable columns: Job, Submitted. Default sort is Submitted, descending.
+- URL query params: `q` (search), `sort`/`dir` (sort column/direction), `page`/`pageSize` (pagination).
 
-# Job Status Page
+## Job Status Page
 
 - Show indicator whether job status is currently running, stopped, etc.
 - List the counts of allocations by version, then by status.
@@ -46,9 +74,13 @@ fields:
         - `us-west1` -> `usw1`
         - `europe-west1` -> `euw1`
         - `ause1` -> `ause1`
-- Allow selectable filters on the table data:
-  - On fields "task group", "version", and "node" from existing values.
-  - On fields "status" and "desired" from possible valid values.
+- Search matches Allocation ID, Node name, or Node IP.
+- Filter dropdowns: task group, version, and node (options drawn from the job's actual allocations), plus
+  status and desired (options are Nomad's fixed enums for those fields). Version's options are sorted
+  numerically descending (newest first); every other dropdown's options are sorted ascending.
+- Sortable columns: Allocation, Node, Status, Desired, Task Group, Version, Uptime (Ports is not sortable).
+  Default sort is Uptime, ascending (most recently started allocations first).
+- URL query params: `q` (search), `taskGroup`/`version`/`node`/`status`/`desired` (filters), `sort`/`dir`
+  (sort column/direction), `page`/`pageSize` (pagination).
 - Page updates periodically based on configuration.
   - Default every 5 seconds.
-

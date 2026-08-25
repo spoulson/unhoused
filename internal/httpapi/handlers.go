@@ -3,6 +3,7 @@ package httpapi
 import (
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"unhoused/internal/syncutil"
@@ -95,19 +96,71 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	now := s.now()
 	submitTimes := versionSubmitTimes(versions)
+	// versionGroups and filterOptions reflect ALL of the job's allocations,
+	// unaffected by the table filters/pagination below — they represent
+	// overall job health and the full set of possible filter values.
 	versionGroups := groupByVersion(allocStubs, submitTimes, now)
+	filterOptions := allocationFilterOptions(allocStubs)
+
+	query := r.URL.Query()
+	filters := allocationFilters{
+		Search:    query.Get("q"),
+		TaskGroup: query.Get("taskGroup"),
+		Version:   query.Get("version"),
+		Node:      query.Get("node"),
+		Status:    query.Get("status"),
+		Desired:   query.Get("desired"),
+	}
+	page, _ := strconv.Atoi(query.Get("page"))
+	pageSize, _ := strconv.Atoi(query.Get("pageSize"))
+	allocSort := allocationSort{
+		Column:    query.Get("sort"),
+		Direction: query.Get("dir"),
+	}
+
+	// Node IPs are only needed to match the search field, and resolving them
+	// costs one extra Nomad call (cheap — one call regardless of allocation
+	// count — but still skipped unless a search is actually in play).
+	var nodeIPs map[string]string
+	if filters.Search != "" {
+		nodes, err := client.ListNodes(ctx)
+		if err != nil {
+			status, message := classifyNomadErr(err, "job not found")
+			writeError(w, status, message)
+			return
+		}
+		nodeIPs = nodeIPsByNodeID(nodes)
+	}
+
+	filteredStubs := filterAllocationStubs(allocStubs, filters, nodeIPs)
+	sortedStubs := sortAllocationStubs(filteredStubs, allocSort, submitTimes)
+	effectivePage, effectivePageSize, totalPages, offset, limit := paginate(page, pageSize, len(sortedStubs))
+	end := offset + limit
+	if end > len(sortedStubs) {
+		end = len(sortedStubs)
+	}
+	pageStubs := sortedStubs[offset:end]
+
+	pagination := paginationDTO{
+		Page:       effectivePage,
+		PageSize:   effectivePageSize,
+		TotalItems: len(filteredStubs),
+		TotalPages: totalPages,
+	}
 
 	// Allocation details are fetched concurrently (bounded by
 	// allocationFetchConcurrency) since each is an independent Nomad call.
-	// Each closure writes only to its own index of allocations, so no
-	// synchronization is needed for those writes; errors are collected by
-	// fanOut.Wait() and reported after every fetch has completed, rather than
-	// short-circuiting the others (there's no cancellation hook to do
+	// Only the current page's stubs are enriched, not every allocation on the
+	// job, so this stays bounded regardless of how many allocations the job
+	// has in total. Each closure writes only to its own index of allocations,
+	// so no synchronization is needed for those writes; errors are collected
+	// by fanOut.Wait() and reported after every fetch has completed, rather
+	// than short-circuiting the others (there's no cancellation hook to do
 	// otherwise once goroutines are already running).
-	allocations := make([]allocationDTO, len(allocStubs))
+	allocations := make([]allocationDTO, len(pageStubs))
 	fanOut := syncutil.NewFanOut(allocationFetchConcurrency)
 
-	for i, stub := range allocStubs {
+	for i, stub := range pageStubs {
 		fanOut.Run(func(any) error {
 			allocPorts, err := client.GetAllocationPorts(ctx, stub.ID)
 			if err != nil {
@@ -149,6 +202,8 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 			Status: deriveJobStatus(job),
 		},
 		VersionGroups: versionGroups,
+		Pagination:    pagination,
+		FilterOptions: filterOptions,
 		Allocations:   allocations,
 	})
 }

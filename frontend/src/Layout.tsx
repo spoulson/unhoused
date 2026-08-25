@@ -1,4 +1,5 @@
 import { Link, Outlet, useParams } from 'react-router-dom'
+import { ThemeToggle } from './components/ThemeToggle'
 import styles from './Layout.module.css'
 
 export function Layout() {
@@ -26,6 +27,9 @@ export function Layout() {
             </>
           )}
         </nav>
+        <div className={styles.themeToggle}>
+          <ThemeToggle />
+        </div>
       </header>
       <main className={styles.main}>
         <Outlet />

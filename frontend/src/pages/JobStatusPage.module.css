@@ -45,6 +45,25 @@
   font-family: var(--font-mono);
 }
 
+.search {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 1rem;
+  background: var(--gb-bg1);
+  color: var(--gb-fg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 4px;
+  padding: 0.45rem 0.65rem;
+  font-family: var(--font-text);
+  font-size: 0.9rem;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--gb-blue);
+}
+
 .filterBar {
   display: flex;
   align-items: flex-end;
@@ -119,6 +138,35 @@
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;
+  padding: 0;
+}
+
+/* Ports is the only non-sortable column (no .sortButton providing its own padding). */
+.table th:last-child {
+  padding: 0.6rem 1rem;
+}
+
+.sortButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.6rem 1rem;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  color: var(--gb-fg0);
+}
+
+.sortArrow {
+  color: var(--gb-blue);
+  font-size: 0.75rem;
 }
 
 .table tbody tr:last-child td {
@@ -173,4 +221,51 @@
 
 .urlRowAlt {
   background: var(--gb-bg1);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.pagination button {
+  background: var(--gb-bg1);
+  color: var(--gb-fg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-family: var(--font-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.pagination button:hover:not(:disabled) {
+  border-color: var(--gb-blue);
+  color: var(--gb-blue);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageSize {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  color: var(--gb-fg2);
+}
+
+.pageSize select {
+  background: var(--gb-bg1);
+  color: var(--gb-fg1);
+  border: 1px solid var(--gb-bg3);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--font-text);
+  font-size: 0.85rem;
 }

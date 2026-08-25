@@ -3,6 +3,8 @@ package httpapi
 import (
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
@@ -95,6 +97,196 @@ func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint6
 	})
 
 	return result
+}
+
+// allocationFilters holds the Job Status Page's per-field allocation table
+// filters, parsed from query parameters. An empty field means "no filter" on
+// that field.
+type allocationFilters struct {
+	Search    string
+	TaskGroup string
+	Version   string
+	Node      string
+	Status    string
+	Desired   string
+}
+
+// filterAllocationStubs returns only the stubs matching every non-empty
+// field in f. nodeIPs maps node ID to node IP (see nodeIPsByNodeID) and is
+// consulted for the search field alongside allocation ID and node name; pass
+// nil when f.Search is empty, since it's unused in that case.
+func filterAllocationStubs(stubs []*nomadapi.AllocationListStub, f allocationFilters, nodeIPs map[string]string) []*nomadapi.AllocationListStub {
+	filtered := make([]*nomadapi.AllocationListStub, 0, len(stubs))
+	search := strings.ToLower(f.Search)
+
+	for _, s := range stubs {
+		if search != "" &&
+			!strings.Contains(strings.ToLower(s.ID), search) &&
+			!strings.Contains(strings.ToLower(s.NodeName), search) &&
+			!strings.Contains(strings.ToLower(nodeIPs[s.NodeID]), search) {
+			continue
+		}
+		if f.TaskGroup != "" && s.TaskGroup != f.TaskGroup {
+			continue
+		}
+		if f.Version != "" && strconv.FormatUint(s.JobVersion, 10) != f.Version {
+			continue
+		}
+		if f.Node != "" && s.NodeName != f.Node {
+			continue
+		}
+		if f.Status != "" && s.ClientStatus != f.Status {
+			continue
+		}
+		if f.Desired != "" && s.DesiredStatus != f.Desired {
+			continue
+		}
+		filtered = append(filtered, s)
+	}
+
+	return filtered
+}
+
+// nodeIPsByNodeID builds a node ID -> node IP lookup from a node list, for
+// resolving the Job Status Page search's node-IP match without an
+// AllocationInfo call per allocation.
+func nodeIPsByNodeID(nodes []*nomadapi.NodeListStub) map[string]string {
+	ips := make(map[string]string, len(nodes))
+	for _, n := range nodes {
+		ips[n.ID] = n.Address
+	}
+	return ips
+}
+
+// allocationFilterOptions lists the distinct task group, version, and node
+// values across stubs, for the Job Status Page's filter dropdowns. Callers
+// pass the full unfiltered stub set so option lists don't narrow as other
+// filters are applied.
+func allocationFilterOptions(stubs []*nomadapi.AllocationListStub) filterOptionsDTO {
+	taskGroups := make(map[string]struct{})
+	versions := make(map[uint64]struct{})
+	nodes := make(map[string]struct{})
+
+	for _, s := range stubs {
+		taskGroups[s.TaskGroup] = struct{}{}
+		versions[s.JobVersion] = struct{}{}
+		nodes[s.NodeName] = struct{}{}
+	}
+
+	opts := filterOptionsDTO{
+		TaskGroups: make([]string, 0, len(taskGroups)),
+		Versions:   make([]uint64, 0, len(versions)),
+		Nodes:      make([]string, 0, len(nodes)),
+	}
+	for tg := range taskGroups {
+		opts.TaskGroups = append(opts.TaskGroups, tg)
+	}
+	for v := range versions {
+		opts.Versions = append(opts.Versions, v)
+	}
+	for n := range nodes {
+		opts.Nodes = append(opts.Nodes, n)
+	}
+
+	sort.Strings(opts.TaskGroups)
+	sort.Slice(opts.Versions, func(i, j int) bool { return opts.Versions[i] > opts.Versions[j] })
+	sort.Strings(opts.Nodes)
+
+	return opts
+}
+
+// allocationSortColumns are the Job Status Page allocation table's sortable
+// columns, matching the column-header click targets in the frontend.
+var allocationSortColumns = []string{"id", "node", "status", "desired", "taskGroup", "version", "uptime"}
+
+func isAllocationSortColumn(column string) bool {
+	for _, c := range allocationSortColumns {
+		if c == column {
+			return true
+		}
+	}
+	return false
+}
+
+// allocationSort holds the Job Status Page allocation table's sort state,
+// parsed from the `sort`/`dir` query parameters. A zero-value/invalid
+// Direction (anything but "asc"/"desc") means unsorted — the stubs' original
+// (Nomad-returned) order is preserved.
+type allocationSort struct {
+	Column    string
+	Direction string
+}
+
+// sortAllocationStubs returns stubs sorted per s, or stubs unchanged if s
+// isn't a valid, active sort. submitTimes resolves the "uptime" column,
+// since uptime isn't a stub field (see uptimeSeconds/versionSubmitTimes).
+func sortAllocationStubs(stubs []*nomadapi.AllocationListStub, s allocationSort, submitTimes map[uint64]time.Time) []*nomadapi.AllocationListStub {
+	if !isAllocationSortColumn(s.Column) || (s.Direction != "asc" && s.Direction != "desc") {
+		return stubs
+	}
+
+	sorted := make([]*nomadapi.AllocationListStub, len(stubs))
+	copy(sorted, stubs)
+
+	less := func(i, j int) bool {
+		a, b := sorted[i], sorted[j]
+		switch s.Column {
+		case "node":
+			return a.NodeName < b.NodeName
+		case "status":
+			return a.ClientStatus < b.ClientStatus
+		case "desired":
+			return a.DesiredStatus < b.DesiredStatus
+		case "taskGroup":
+			return a.TaskGroup < b.TaskGroup
+		case "version":
+			return a.JobVersion < b.JobVersion
+		case "uptime":
+			// Smaller uptime = more recently submitted, i.e. a later SubmitTime.
+			return submitTimes[a.JobVersion].After(submitTimes[b.JobVersion])
+		default: // "id"
+			return a.ID < b.ID
+		}
+	}
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if s.Direction == "desc" {
+			return less(j, i)
+		}
+		return less(i, j)
+	})
+
+	return sorted
+}
+
+// paginate computes the effective page and the [offset, offset+limit) slice
+// bounds for a page of size pageSize over totalItems items. Non-positive
+// page/pageSize fall back to 1/50; pageSize is capped at 500. If page lands
+// beyond the last available page, it's clamped to the last page instead of
+// returning an empty slice.
+func paginate(page, pageSize, totalItems int) (effectivePage, effectivePageSize, totalPages, offset, limit int) {
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+	if pageSize > 500 {
+		pageSize = 500
+	}
+	if page <= 0 {
+		page = 1
+	}
+
+	totalPages = (totalItems + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	offset = (page - 1) * pageSize
+	limit = pageSize
+
+	return page, pageSize, totalPages, offset, limit
 }
 
 func portURL(ip string, port int) string {

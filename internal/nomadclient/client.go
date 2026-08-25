@@ -19,6 +19,7 @@ type API interface {
 	JobAllocations(ctx context.Context, jobID string) ([]*nomadapi.AllocationListStub, error)
 	AllocationInfo(ctx context.Context, allocID string) (*nomadapi.Allocation, error)
 	GetAllocationPorts(ctx context.Context, allocID string) (AllocationPorts, error)
+	ListNodes(ctx context.Context) ([]*nomadapi.NodeListStub, error)
 }
 
 const (
@@ -150,6 +151,20 @@ func (c *Client) GetAllocationPorts(ctx context.Context, allocID string) (Alloca
 	c.allocationPorts.Set(allocID, result)
 
 	return result, nil
+}
+
+// ListNodes returns the cluster's nodes. Used to resolve node IPs for the
+// Job Status Page's search, without an AllocationInfo call per allocation:
+// this is a single Nomad call regardless of how many allocations the job has.
+func (c *Client) ListNodes(ctx context.Context) ([]*nomadapi.NodeListStub, error) {
+	q := (&nomadapi.QueryOptions{}).WithContext(ctx)
+
+	nodes, _, err := c.nomad.Nodes().List(q)
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
 }
 
 // nodeIPFromAllocation returns the host IP an allocation is running on,

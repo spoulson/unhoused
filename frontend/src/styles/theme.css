@@ -1,6 +1,12 @@
-/* Gruvbox light palette (faded accent set — Gruvbox's own recommendation for
-   light backgrounds). See https://github.com/morhetz/gruvbox and specs/style.md. */
-:root {
+/* Gruvbox palette — light and dark. See https://github.com/morhetz/gruvbox and specs/style.md.
+   Light uses Gruvbox's "faded" accent set (its own recommendation for light backgrounds); dark
+   uses the "bright" accent set (its recommendation for dark backgrounds). Every component styles
+   itself exclusively via these --gb-* custom properties, so switching themes only needs to
+   redefine the tokens here — no component CSS depends on which mode is active. */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
   --gb-bg0: #fbf1c7;
   --gb-bg1: #ebdbb2;
   --gb-bg2: #d5c4a1;
@@ -18,6 +24,28 @@
   --gb-purple: #8f3f71;
   --gb-aqua: #427b58;
   --gb-orange: #af3a03;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --gb-bg0: #282828;
+  --gb-bg1: #3c3836;
+  --gb-bg2: #504945;
+  --gb-bg3: #665c54;
+
+  --gb-fg0: #fbf1c7;
+  --gb-fg1: #ebdbb2;
+  --gb-fg2: #d5c4a1;
+  --gb-gray: #928374;
+
+  --gb-red: #fb4934;
+  --gb-green: #b8bb26;
+  --gb-yellow: #fabd2f;
+  --gb-blue: #83a598;
+  --gb-purple: #d3869b;
+  --gb-aqua: #8ec07c;
+  --gb-orange: #fe8019;
 }
 
 @font-face {
@@ -62,6 +90,7 @@ body {
   font-family: var(--font-text);
   font-size: 16px;
   line-height: 1.5;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 #root {

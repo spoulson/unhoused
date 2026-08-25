@@ -59,8 +59,23 @@ export interface Allocation {
   ports: Port[]
 }
 
+export interface Pagination {
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+}
+
+export interface FilterOptions {
+  taskGroups: string[]
+  versions: number[]
+  nodes: string[]
+}
+
 export interface JobStatusResponse {
   job: Job
   versionGroups: VersionGroup[]
+  pagination: Pagination
+  filterOptions: FilterOptions
   allocations: Allocation[]
 }

@@ -34,6 +34,9 @@ type fakeNomad struct {
 
 	allocInfo    map[string]*nomadapi.Allocation
 	allocInfoErr error
+
+	nodes    []*nomadapi.NodeListStub
+	nodesErr error
 }
 
 var _ nomadclient.API = (*fakeNomad)(nil)
@@ -86,6 +89,10 @@ func (f *fakeNomad) GetAllocationPorts(_ context.Context, allocID string) (nomad
 	}
 
 	return result, nil
+}
+
+func (f *fakeNomad) ListNodes(context.Context) ([]*nomadapi.NodeListStub, error) {
+	return f.nodes, f.nodesErr
 }
 
 // realNotFoundErr round-trips a request through the actual Nomad SDK against
@@ -270,6 +277,204 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	require.Len(t, alloc.Ports, 1)
 	assert.Equal(t, "http://10.0.0.5:8080", alloc.Ports[0].URL)
 	assert.Equal(t, "http://node1.c.mailforce-production-usw1.internal:8080", alloc.Ports[0].NodeURL)
+
+	assert.Equal(t, 1, got.Pagination.Page)
+	assert.Equal(t, 50, got.Pagination.PageSize)
+	assert.Equal(t, 1, got.Pagination.TotalItems)
+	assert.Equal(t, 1, got.Pagination.TotalPages)
+
+	assert.Equal(t, []string{"web"}, got.FilterOptions.TaskGroups)
+	assert.EqualValues(t, []uint64{3}, got.FilterOptions.Versions)
+	assert.Equal(t, []string{"node1"}, got.FilterOptions.Nodes)
+}
+
+func multiAllocFake(now time.Time) *fakeNomad {
+	submitTimes := map[uint64]int64{
+		3: now.Add(-1234 * time.Second).UnixNano(),
+		2: now.Add(-5000 * time.Second).UnixNano(),
+	}
+
+	nodeIPs := map[string]string{"node1": "10.1.1.1", "node2": "10.1.1.2"}
+
+	allocInfo := make(map[string]*nomadapi.Allocation)
+	stubs := make([]*nomadapi.AllocationListStub, 0, 5)
+	add := func(id, taskGroup string, version uint64, node, clientStatus string) {
+		stubs = append(stubs, &nomadapi.AllocationListStub{
+			ID: id, TaskGroup: taskGroup, JobVersion: version, NodeID: "id-" + node, NodeName: node,
+			ClientStatus: clientStatus, DesiredStatus: "run",
+		})
+		allocInfo[id] = &nomadapi.Allocation{
+			NodeName: node,
+			AllocatedResources: &nomadapi.AllocatedResources{
+				Shared: nomadapi.AllocatedSharedResources{
+					Networks: []*nomadapi.NetworkResource{{IP: nodeIPs[node]}},
+				},
+			},
+		}
+	}
+
+	add("a1", "web", 3, "node1", "running")
+	add("a2", "web", 3, "node2", "pending")
+	add("a3", "worker", 3, "node1", "running")
+	add("a4", "worker", 2, "node2", "failed")
+	add("a5", "web", 2, "node1", "running")
+
+	return &fakeNomad{
+		job: &nomadapi.Job{ID: ptr("web"), Name: ptr("web"), Status: ptr("running"), Stop: ptr(false)},
+		versions: []*nomadapi.Job{
+			{Version: ptr(uint64(3)), SubmitTime: ptr(submitTimes[3])},
+			{Version: ptr(uint64(2)), SubmitTime: ptr(submitTimes[2])},
+		},
+		allocs:    stubs,
+		allocInfo: allocInfo,
+		nodes: []*nomadapi.NodeListStub{
+			{ID: "id-node1", Address: nodeIPs["node1"]},
+			{ID: "id-node2", Address: nodeIPs["node2"]},
+		},
+	}
+}
+
+func TestHandleJobStatusFiltering(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?taskGroup=web&node=node1", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 2, "a1 and a5 match taskGroup=web,node=node1")
+	ids := []string{got.Allocations[0].ID, got.Allocations[1].ID}
+	assert.ElementsMatch(t, []string{"a1", "a5"}, ids)
+	assert.Equal(t, 2, got.Pagination.TotalItems)
+
+	// versionGroups and filterOptions stay unfiltered.
+	assert.Len(t, got.VersionGroups, 2)
+	assert.Equal(t, []string{"web", "worker"}, got.FilterOptions.TaskGroups)
+	assert.Equal(t, []string{"node1", "node2"}, got.FilterOptions.Nodes)
+}
+
+func TestHandleJobStatusSearch(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?q=NODE1", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 3, "a1, a3, a5 all run on node1")
+	ids := make([]string, len(got.Allocations))
+	for i, a := range got.Allocations {
+		ids[i] = a.ID
+	}
+	assert.ElementsMatch(t, []string{"a1", "a3", "a5"}, ids)
+	assert.Equal(t, 3, got.Pagination.TotalItems)
+}
+
+func TestHandleJobStatusSearchByNodeIP(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?q=10.1.1.2", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 2, "a2 and a4 both run on node2 (10.1.1.2)")
+	ids := []string{got.Allocations[0].ID, got.Allocations[1].ID}
+	assert.ElementsMatch(t, []string{"a2", "a4"}, ids)
+}
+
+func TestHandleJobStatusSort(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?sort=id&dir=desc&pageSize=200", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 5)
+	ids := make([]string, len(got.Allocations))
+	for i, a := range got.Allocations {
+		ids[i] = a.ID
+	}
+	assert.Equal(t, []string{"a5", "a4", "a3", "a2", "a1"}, ids)
+}
+
+func TestHandleJobStatusSortInvalidIgnored(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?sort=bogus&dir=desc&pageSize=200", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 5)
+	ids := make([]string, len(got.Allocations))
+	for i, a := range got.Allocations {
+		ids[i] = a.ID
+	}
+	assert.Equal(t, []string{"a1", "a2", "a3", "a4", "a5"}, ids, "invalid column falls back to original stub order")
+}
+
+func TestHandleJobStatusPagination(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?page=2&pageSize=2", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	require.Len(t, got.Allocations, 2)
+	assert.Equal(t, 2, got.Pagination.Page)
+	assert.Equal(t, 2, got.Pagination.PageSize)
+	assert.Equal(t, 5, got.Pagination.TotalItems)
+	assert.Equal(t, 3, got.Pagination.TotalPages)
+}
+
+func TestHandleJobStatusPageBeyondRangeClamps(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	fake := multiAllocFake(now)
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web?page=99&pageSize=2", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+	got := decodeJSON[jobStatusResponse](t, rec)
+
+	assert.Equal(t, 3, got.Pagination.Page, "clamps to last valid page")
+	require.Len(t, got.Allocations, 1, "last page has the remaining 1 of 5 allocations")
 }
 
 func TestHandleJobStatusStoppedJob(t *testing.T) {
