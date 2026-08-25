@@ -1,5 +1,7 @@
 # unhoused
 
+<img src="frontend/public/logo.svg" alt="unhoused logo" width="120" />
+
 An alternative web UI for monitoring [HashiCorp Nomad](https://www.nomadproject.io/) job and allocation status.
 
 The backend (Go) polls the Nomad HTTP API and serves a REST API; the frontend (React) consumes it. Point `unhoused` at
