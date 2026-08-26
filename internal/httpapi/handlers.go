@@ -4,7 +4,10 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
+
+	nomadapi "github.com/hashicorp/nomad/api"
 
 	"unhoused/internal/syncutil"
 )
@@ -73,23 +76,41 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	job, err := client.JobInfo(ctx, jobID)
-	if err != nil {
-		status, message := classifyNomadErr(err, "job not found")
+	// job, versions, and allocStubs are independent Nomad calls, fetched
+	// concurrently to cut this request's latency roughly to a third.
+	var (
+		job           *nomadapi.Job
+		versions      []*nomadapi.Job
+		allocStubs    []*nomadapi.AllocationListStub
+		jobErr        error
+		versionsErr   error
+		allocationErr error
+		wg            sync.WaitGroup
+	)
+
+	wg.Go(func() {
+		job, jobErr = client.JobInfo(ctx, jobID)
+	})
+	wg.Go(func() {
+		versions, versionsErr = client.JobVersions(ctx, jobID)
+	})
+	wg.Go(func() {
+		allocStubs, allocationErr = client.JobAllocations(ctx, jobID)
+	})
+	wg.Wait()
+
+	if jobErr != nil {
+		status, message := classifyNomadErr(jobErr, "job not found")
 		writeError(w, status, message)
 		return
 	}
-
-	versions, err := client.JobVersions(ctx, jobID)
-	if err != nil {
-		status, message := classifyNomadErr(err, "job not found")
+	if versionsErr != nil {
+		status, message := classifyNomadErr(versionsErr, "job not found")
 		writeError(w, status, message)
 		return
 	}
-
-	allocStubs, err := client.JobAllocations(ctx, jobID)
-	if err != nil {
-		status, message := classifyNomadErr(err, "job not found")
+	if allocationErr != nil {
+		status, message := classifyNomadErr(allocationErr, "job not found")
 		writeError(w, status, message)
 		return
 	}
