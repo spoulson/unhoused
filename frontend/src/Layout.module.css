@@ -37,6 +37,22 @@
   color: var(--gb-blue);
 }
 
+.profileSelect {
+  background: transparent;
+  border: none;
+  color: var(--gb-blue);
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.profileSelect:hover,
+.profileSelect:focus {
+  text-decoration: underline;
+}
+
 .themeToggle {
   margin-left: auto;
 }
