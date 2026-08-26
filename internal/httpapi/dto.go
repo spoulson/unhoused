@@ -11,9 +11,7 @@ type errorDetail struct {
 }
 
 type profileDTO struct {
-	Name        string `json:"name"`
-	Environment string `json:"environment"`
-	Region      string `json:"region"`
+	Name string `json:"name"`
 }
 
 type profilesResponse struct {

@@ -121,12 +121,12 @@ func testConfig() *config.Config {
 		RefreshIntervalSeconds: 5,
 		Profiles: []config.Profile{
 			{
-				Name: "prod-usw1", Environment: config.EnvironmentProduction, Region: config.RegionUSWest1,
-				NodeHostnameTemplate: "{node}.c.mailforce-production-usw1.internal",
+				Name:                 "prod-usw1",
+				NodeHostnameTemplate: "{node}.production-usw1.local",
 			},
 			{
-				Name: "staging-euw1", Environment: config.EnvironmentStaging, Region: config.RegionEuropeWest1,
-				NodeHostnameTemplate: "{node}.node.europe-west1.staging.mailforce",
+				Name:                 "staging-euw1",
+				NodeHostnameTemplate: "{node}.node.europe-west1.staging.local",
 			},
 		},
 	}
@@ -154,8 +154,6 @@ func TestHandleListProfiles(t *testing.T) {
 	assert.Equal(t, 5, got.RefreshIntervalSeconds)
 	require.Len(t, got.Profiles, 2)
 	assert.Equal(t, "prod-usw1", got.Profiles[0].Name)
-	assert.Equal(t, "production", got.Profiles[0].Environment)
-	assert.Equal(t, "us-west1", got.Profiles[0].Region)
 }
 
 func TestHandleListJobsUnknownProfile(t *testing.T) {
@@ -282,7 +280,7 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 
 	require.Len(t, alloc.Ports, 1)
 	assert.Equal(t, "10.0.0.5:8080", alloc.Ports[0].Address)
-	assert.Equal(t, "node1.c.mailforce-production-usw1.internal:8080", alloc.Ports[0].NodeAddress)
+	assert.Equal(t, "node1.production-usw1.local:8080", alloc.Ports[0].NodeAddress)
 
 	assert.Equal(t, 1, got.Pagination.Page)
 	assert.Equal(t, 50, got.Pagination.PageSize)

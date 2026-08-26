@@ -34,14 +34,12 @@ Response `200`:
 {
   "refreshIntervalSeconds": 5,
   "profiles": [
-    { "name": "prod-usw1", "environment": "production", "region": "us-west1" }
+    { "name": "prod-usw1" }
   ]
 }
 ```
 
-`name` is the profile identifier used in later routes. `environment` / `region` are only the values listed
-in the Configuration section (`staging`/`production`, and the four supported regions) — Nomad URL and token
-are intentionally omitted.
+`name` is the profile identifier used in later routes — Nomad URL and token are intentionally omitted.
 
 ### `GET /api/profiles/{profile}/jobs`
 
@@ -111,7 +109,7 @@ Response `200`:
           "ip": "10.0.0.5",
           "port": 8080,
           "address": "10.0.0.5:8080",
-          "nodeAddress": "node1.node.us-west1.staging.mailforce:8080"
+          "nodeAddress": "node1.node.us-west1.staging.local:8080"
         }
       ]
     }

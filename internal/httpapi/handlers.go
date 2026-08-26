@@ -20,9 +20,7 @@ func (s *Server) handleListProfiles(w http.ResponseWriter, r *http.Request) {
 	profiles := make([]profileDTO, 0, len(s.cfg.Profiles))
 	for _, p := range s.cfg.Profiles {
 		profiles = append(profiles, profileDTO{
-			Name:        p.Name,
-			Environment: string(p.Environment),
-			Region:      string(p.Region),
+			Name: p.Name,
 		})
 	}
 

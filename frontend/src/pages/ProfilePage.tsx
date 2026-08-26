@@ -225,7 +225,13 @@ export function ProfilePage() {
 
   return (
     <div>
-      <h1>{pageTitle}</h1>
+      <h1 className={styles.title}>
+        Profile:{' '}
+        <span className={styles.icon} aria-hidden="true">
+          ▣
+        </span>
+        {profileName}
+      </h1>
       {data?.jobs.length === 0 ? (
         <p>No jobs found.</p>
       ) : (

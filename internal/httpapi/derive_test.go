@@ -119,14 +119,14 @@ func TestNodeAddress(t *testing.T) {
 		want     string
 	}{
 		{
-			name: "staging-style template", template: "{node}.node.us-west1.staging.mailforce",
+			name: "staging-style template", template: "{node}.node.us-west1.staging.local",
 			nodeName: "node1", port: 8080,
-			want: "node1.node.us-west1.staging.mailforce:8080",
+			want: "node1.node.us-west1.staging.local:8080",
 		},
 		{
-			name: "production-style template", template: "{node}.c.mailforce-production-usw1.internal",
+			name: "production-style template", template: "{node}.c.local-production-usw1.internal",
 			nodeName: "node1", port: 8080,
-			want: "node1.c.mailforce-production-usw1.internal:8080",
+			want: "node1.c.local-production-usw1.internal:8080",
 		},
 		{
 			name: "default template", template: "{node}",
@@ -145,7 +145,7 @@ func TestNodeAddress(t *testing.T) {
 
 func TestExtractPorts(t *testing.T) {
 	profile := config.Profile{
-		NodeHostnameTemplate: "{node}.node.us-west1.staging.mailforce",
+		NodeHostnameTemplate: "{node}.node.us-west1.staging.local",
 	}
 
 	ports := []nomadapi.PortMapping{
@@ -158,11 +158,11 @@ func TestExtractPorts(t *testing.T) {
 
 	appPort := got[0]
 	assert.Equal(t, "10.0.0.5:8080", appPort.Address)
-	assert.Equal(t, "node1.node.us-west1.staging.mailforce:8080", appPort.NodeAddress)
+	assert.Equal(t, "node1.node.us-west1.staging.local:8080", appPort.NodeAddress)
 
 	metricsPort := got[1]
 	assert.Equal(t, "10.0.0.5:9090", metricsPort.Address)
-	assert.Equal(t, "node1.node.us-west1.staging.mailforce:9090", metricsPort.NodeAddress)
+	assert.Equal(t, "node1.node.us-west1.staging.local:9090", metricsPort.NodeAddress)
 }
 
 func TestExtractPortsNoPorts(t *testing.T) {

@@ -1,15 +1,10 @@
 // Mirrors internal/httpapi/dto.go exactly. See specs/api.md for the contract.
 
-export type Environment = 'staging' | 'production'
-export type Region = 'us-west1' | 'us-east4' | 'europe-west1' | 'ause1'
-
 export type JobStatus = 'running' | 'pending' | 'stopped' | 'dead'
 export type ClientStatus = 'running' | 'pending' | 'failed' | 'complete' | 'lost'
 
 export interface Profile {
   name: string
-  environment: Environment
-  region: Region
 }
 
 export interface ProfilesResponse {

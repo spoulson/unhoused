@@ -9,8 +9,8 @@
 
 .card {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.75rem;
   background: var(--gb-bg1);
   border: 1px solid var(--gb-bg3);
   border-radius: 6px;
@@ -23,14 +23,15 @@
   border-color: var(--gb-blue);
 }
 
+.icon {
+  flex: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--gb-blue);
+}
+
 .name {
   font-weight: 700;
   color: var(--gb-fg0);
   font-family: var(--font-mono);
-}
-
-.meta {
-  color: var(--gb-fg2);
-  font-size: 0.9rem;
-  text-transform: capitalize;
 }
