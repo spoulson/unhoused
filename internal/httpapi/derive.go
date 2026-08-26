@@ -290,22 +290,22 @@ func paginate(page, pageSize, totalItems int) (effectivePage, effectivePageSize,
 	return page, pageSize, totalPages, offset, limit
 }
 
-func portURL(ip string, port int) string {
-	return fmt.Sprintf("http://%s:%d", ip, port)
+func portAddress(ip string, port int) string {
+	return fmt.Sprintf("%s:%d", ip, port)
 }
 
-// nodeURL derives the environment/region-specific hostname link for an
-// allocation's http-labeled port, per specs/functional_requirements.md.
-func nodeURL(env config.Environment, region config.Region, nodeName string, port int) (string, error) {
+// nodeAddress derives the environment/region-specific hostname address for
+// an allocation's port, per specs/functional_requirements.md.
+func nodeAddress(env config.Environment, region config.Region, nodeName string, port int) (string, error) {
 	switch env {
 	case config.EnvironmentStaging:
-		return fmt.Sprintf("http://%s.node.%s.staging.mailforce:%d", nodeName, region, port), nil
+		return fmt.Sprintf("%s.node.%s.staging.mailforce:%d", nodeName, region, port), nil
 	case config.EnvironmentProduction:
 		shortRegion, err := config.ShortRegion(region)
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("http://%s.c.mailforce-production-%s.internal:%d", nodeName, shortRegion, port), nil
+		return fmt.Sprintf("%s.c.mailforce-production-%s.internal:%d", nodeName, shortRegion, port), nil
 	default:
 		return "", fmt.Errorf("unknown environment %q", env)
 	}
@@ -317,19 +317,17 @@ func extractPorts(mappings []nomadapi.PortMapping, nodeName string, profile conf
 	ports := make([]portDTO, 0, len(mappings))
 
 	for _, p := range mappings {
-		dto := portDTO{
-			Label: p.Label,
-			IP:    p.HostIP,
-			Port:  p.Value,
-			URL:   portURL(p.HostIP, p.Value),
+		nAddr, err := nodeAddress(profile.Environment, profile.Region, nodeName, p.Value)
+		if err != nil {
+			return nil, err
 		}
 
-		if p.Label == "http" {
-			url, err := nodeURL(profile.Environment, profile.Region, nodeName, p.Value)
-			if err != nil {
-				return nil, err
-			}
-			dto.NodeURL = url
+		dto := portDTO{
+			Label:       p.Label,
+			IP:          p.HostIP,
+			Port:        p.Value,
+			Address:     portAddress(p.HostIP, p.Value),
+			NodeAddress: nAddr,
 		}
 
 		ports = append(ports, dto)

@@ -44,11 +44,11 @@ type versionGroupDTO struct {
 }
 
 type portDTO struct {
-	Label   string `json:"label"`
-	IP      string `json:"ip"`
-	Port    int    `json:"port"`
-	URL     string `json:"url"`
-	NodeURL string `json:"nodeUrl,omitempty"`
+	Label       string `json:"label"`
+	IP          string `json:"ip"`
+	Port        int    `json:"port"`
+	Address     string `json:"address"`
+	NodeAddress string `json:"nodeAddress"`
 }
 
 type allocationDTO struct {

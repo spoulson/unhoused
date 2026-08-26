@@ -110,8 +110,8 @@ Response `200`:
           "label": "http",
           "ip": "10.0.0.5",
           "port": 8080,
-          "url": "http://10.0.0.5:8080",
-          "nodeUrl": "http://node1.node.us-west1.staging.mailforce:8080"
+          "address": "10.0.0.5:8080",
+          "nodeAddress": "node1.node.us-west1.staging.mailforce:8080"
         }
       ]
     }
@@ -139,9 +139,9 @@ Response `200`:
   both `now - submitTime`, where `submitTime` is the Nomad job version's `SubmitTime` (Nomad's per-version
   `GET /v1/job/{id}/versions` data) matching that allocation's `version` — not each allocation's own
   `CreateTime`. All allocations within a version group therefore share the same last-modified value.
-- `ports` includes one entry per network port defined on the allocation. `url` (`http://<ip>:<port>`) is
-  always present. `nodeUrl` is present only when `label == "http"`, and holds the environment/region-derived
-  hostname link from the functional requirements — computed server-side so the frontend doesn't need to
-  know the per-env/region hostname rules.
+- `ports` includes one entry per network port defined on the allocation. `address` (`<ip>:<port>`) and
+  `nodeAddress` (`<host>:<port>`, using the environment/region-derived hostname from the functional
+  requirements) are always present — computed server-side so the frontend doesn't need to know the
+  per-env/region hostname rules.
 
 Errors: `404` if `{profile}` or `{jobId}` don't exist; `502` if the Nomad API call fails.

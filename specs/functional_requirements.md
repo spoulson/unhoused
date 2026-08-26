@@ -73,11 +73,11 @@ fields:
   - Task group name
   - Version number
   - Last Modified
-  - For each network port defined, link to its IP:port as URL like: `http://<ip>:<port>`.
-    - And if the port is labeled `http`, also include a link to the node like: `http://<host>:<port>`.
+  - For each network port defined, list its address as `<ip>:<port>`.
+    - Also list the node's address as `<host>:<port>`.
       - `host` is a hostname value derived from the Nomad node name with special rules based on the Nomad environment and region:
-        - For environment "staging", `host` follows format: `http://<node_name>.node.<region>.staging.mailforce:<port>`.
-        - For environment "production", `host` follows format: `http://<node_name>.c.mailforce-production-<short_region>.internal:<port>`.
+        - For environment "staging", `host` follows format: `<node_name>.node.<region>.staging.mailforce`.
+        - For environment "production", `host` follows format: `<node_name>.c.mailforce-production-<short_region>.internal`.
       - `short_region` is derived from `region` as:
         - `us-east4` -> `use4`
         - `us-west1` -> `usw1`

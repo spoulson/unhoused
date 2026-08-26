@@ -43,8 +43,8 @@ export interface Port {
   label: string
   ip: string
   port: number
-  url: string
-  nodeUrl?: string
+  address: string
+  nodeAddress: string
 }
 
 export interface Allocation {

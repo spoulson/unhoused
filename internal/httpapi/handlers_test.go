@@ -275,8 +275,8 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	assert.EqualValues(t, 3, alloc.Version)
 
 	require.Len(t, alloc.Ports, 1)
-	assert.Equal(t, "http://10.0.0.5:8080", alloc.Ports[0].URL)
-	assert.Equal(t, "http://node1.c.mailforce-production-usw1.internal:8080", alloc.Ports[0].NodeURL)
+	assert.Equal(t, "10.0.0.5:8080", alloc.Ports[0].Address)
+	assert.Equal(t, "node1.c.mailforce-production-usw1.internal:8080", alloc.Ports[0].NodeAddress)
 
 	assert.Equal(t, 1, got.Pagination.Page)
 	assert.Equal(t, 50, got.Pagination.PageSize)
