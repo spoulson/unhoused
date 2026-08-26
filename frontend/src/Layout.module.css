@@ -37,6 +37,12 @@
   color: var(--gb-blue);
 }
 
+.icon {
+  display: inline-block;
+  color: var(--gb-blue);
+  margin-right: 0.35rem;
+}
+
 .profileSelect {
   background: transparent;
   border: none;

@@ -53,6 +53,9 @@ export function Layout() {
           {profileName && (
             <>
               {' / '}
+              <span className={styles.icon} aria-hidden="true">
+                ▣
+              </span>
               <select
                 className={styles.profileSelect}
                 value={profileName}
@@ -72,6 +75,9 @@ export function Layout() {
           {profileName && jobId && (
             <>
               {' / '}
+              <span className={styles.icon} aria-hidden="true">
+                ▶
+              </span>
               <span className="mono">{jobId}</span>
             </>
           )}

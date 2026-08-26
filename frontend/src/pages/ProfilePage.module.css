@@ -94,6 +94,17 @@
   font-weight: 600;
 }
 
+.jobLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jobIcon {
+  font-size: 0.85em;
+  color: var(--gb-blue);
+}
+
 .pagination {
   display: flex;
   align-items: center;

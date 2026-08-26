@@ -431,7 +431,12 @@ export function JobStatusPage() {
   return (
     <div>
       <h1 className={styles.title}>
-        {pageTitle} <StatusBadge status={data.job.status} />
+        Job:{' '}
+        <span className={styles.icon} aria-hidden="true">
+          ▶
+        </span>
+        {jobId}
+        <StatusBadge status={data.job.status} />
       </h1>
 
       <h2>Versions</h2>

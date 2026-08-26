@@ -4,6 +4,12 @@
   gap: 0.75rem;
 }
 
+.icon {
+  font-size: 1.1em;
+  line-height: 1;
+  color: var(--gb-blue);
+}
+
 .versionGroups {
   display: flex;
   flex-direction: column;

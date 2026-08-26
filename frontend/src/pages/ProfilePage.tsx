@@ -263,7 +263,10 @@ export function ProfilePage() {
                   {paginatedJobs.map((job) => (
                     <tr key={job.id}>
                       <td>
-                        <Link to={`/profiles/${profileName}/jobs/${job.id}`} className="mono">
+                        <Link to={`/profiles/${profileName}/jobs/${job.id}`} className={`mono ${styles.jobLink}`}>
+                          <span className={styles.jobIcon} aria-hidden="true">
+                            ▶
+                          </span>
                           {job.name}
                         </Link>
                       </td>
