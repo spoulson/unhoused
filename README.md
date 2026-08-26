@@ -21,7 +21,7 @@ docker compose up
 ```
 
 Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy together, using
-`config.example.yaml` (placeholder Nomad URLs/tokens) as the backend's config.
+`config.yaml` as the backend's config.
 
 For live-reloading local iteration (source edits apply without a rebuild):
 
