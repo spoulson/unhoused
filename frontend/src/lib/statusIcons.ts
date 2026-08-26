@@ -6,7 +6,7 @@ const STATUS_ICONS: Record<JobStatus | ClientStatus, string> = {
   stopped: '■',
   dead: '✗',
   failed: '✗',
-  complete: '✓',
+  complete: '■',
   lost: '▲',
 }
 
