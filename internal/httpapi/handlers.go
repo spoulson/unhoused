@@ -188,10 +188,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 
-			ports, err := extractPorts(allocPorts.Ports, stub.NodeName, profile)
-			if err != nil {
-				return err
-			}
+			ports := extractPorts(allocPorts.Ports, stub.NodeName, profile)
 
 			allocations[i] = allocationDTO{
 				ID:                  stub.ID,

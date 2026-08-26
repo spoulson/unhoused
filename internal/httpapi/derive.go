@@ -294,44 +294,30 @@ func portAddress(ip string, port int) string {
 	return fmt.Sprintf("%s:%d", ip, port)
 }
 
-// nodeAddress derives the environment/region-specific hostname address for
-// an allocation's port, per specs/functional_requirements.md.
-func nodeAddress(env config.Environment, region config.Region, nodeName string, port int) (string, error) {
-	switch env {
-	case config.EnvironmentStaging:
-		return fmt.Sprintf("%s.node.%s.staging.mailforce:%d", nodeName, region, port), nil
-	case config.EnvironmentProduction:
-		shortRegion, err := config.ShortRegion(region)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("%s.c.mailforce-production-%s.internal:%d", nodeName, shortRegion, port), nil
-	default:
-		return "", fmt.Errorf("unknown environment %q", env)
-	}
+// nodeAddress derives an allocation port's node hostname address by
+// substituting the profile's configured node hostname template's "{node}"
+// placeholder with nodeName, per specs/functional_requirements.md.
+func nodeAddress(template, nodeName string, port int) string {
+	host := strings.ReplaceAll(template, "{node}", nodeName)
+	return fmt.Sprintf("%s:%d", host, port)
 }
 
 // extractPorts builds the ports[] DTO for an allocation, one entry per
 // network port, per specs/api.md.
-func extractPorts(mappings []nomadapi.PortMapping, nodeName string, profile config.Profile) ([]portDTO, error) {
+func extractPorts(mappings []nomadapi.PortMapping, nodeName string, profile config.Profile) []portDTO {
 	ports := make([]portDTO, 0, len(mappings))
 
 	for _, p := range mappings {
-		nAddr, err := nodeAddress(profile.Environment, profile.Region, nodeName, p.Value)
-		if err != nil {
-			return nil, err
-		}
-
 		dto := portDTO{
 			Label:       p.Label,
 			IP:          p.HostIP,
 			Port:        p.Value,
 			Address:     portAddress(p.HostIP, p.Value),
-			NodeAddress: nAddr,
+			NodeAddress: nodeAddress(profile.NodeHostnameTemplate, nodeName, p.Value),
 		}
 
 		ports = append(ports, dto)
 	}
 
-	return ports, nil
+	return ports
 }

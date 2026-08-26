@@ -35,6 +35,7 @@ profiles:
 	assert.Equal(t, defaultHTTPPublicURL, cfg.HTTPPublicURL)
 	assert.Equal(t, defaultListenPort, cfg.ListenPort)
 	assert.Equal(t, defaultRefreshIntervalSeconds, cfg.RefreshIntervalSeconds)
+	assert.Equal(t, defaultNodeHostnameTemplate, cfg.Profiles[0].NodeHostnameTemplate)
 }
 
 func TestLoadHonorsExplicitValues(t *testing.T) {
@@ -48,6 +49,7 @@ profiles:
     region: europe-west1
     nomadUrl: http://10.0.0.2:4646
     nomadToken: secret
+    nodeHostnameTemplate: "{node}.example.internal"
 `)
 
 	cfg, err := Load(path)
@@ -56,6 +58,7 @@ profiles:
 	assert.Equal(t, "https://unhoused.example.com", cfg.HTTPPublicURL)
 	assert.Equal(t, 9000, cfg.ListenPort)
 	assert.Equal(t, 10, cfg.RefreshIntervalSeconds)
+	assert.Equal(t, "{node}.example.internal", cfg.Profiles[0].NodeHostnameTemplate)
 }
 
 func TestLoadValidationErrors(t *testing.T) {
@@ -125,6 +128,18 @@ profiles:
     region: us-west1
 `,
 			wantErr: "nomadUrl is required",
+		},
+		{
+			name: "invalid nodeHostnameTemplate",
+			yaml: `
+profiles:
+  - name: bad-template
+    environment: staging
+    region: us-west1
+    nomadUrl: http://10.0.0.1:4646
+    nodeHostnameTemplate: "static.example.com"
+`,
+			wantErr: "nodeHostnameTemplate must contain",
 		},
 	}
 

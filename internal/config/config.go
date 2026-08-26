@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -45,11 +46,12 @@ func ShortRegion(r Region) (string, error) {
 
 // Profile describes a single Nomad environment unhoused can monitor.
 type Profile struct {
-	Name        string      `yaml:"name"`
-	Environment Environment `yaml:"environment"`
-	Region      Region      `yaml:"region"`
-	NomadURL    string      `yaml:"nomadUrl"`
-	NomadToken  string      `yaml:"nomadToken"`
+	Name                 string      `yaml:"name"`
+	Environment          Environment `yaml:"environment"`
+	Region               Region      `yaml:"region"`
+	NomadURL             string      `yaml:"nomadUrl"`
+	NomadToken           string      `yaml:"nomadToken"`
+	NodeHostnameTemplate string      `yaml:"nodeHostnameTemplate"`
 }
 
 // Config is the top-level unhoused configuration file.
@@ -64,6 +66,7 @@ const (
 	defaultHTTPPublicURL          = "http://localhost"
 	defaultListenPort             = 3001
 	defaultRefreshIntervalSeconds = 5
+	defaultNodeHostnameTemplate   = "{node}"
 )
 
 // Load reads, parses, defaults, and validates the config file at path.
@@ -99,6 +102,12 @@ func (c *Config) applyDefaults() {
 	if c.RefreshIntervalSeconds == 0 {
 		c.RefreshIntervalSeconds = defaultRefreshIntervalSeconds
 	}
+
+	for i := range c.Profiles {
+		if c.Profiles[i].NodeHostnameTemplate == "" {
+			c.Profiles[i].NodeHostnameTemplate = defaultNodeHostnameTemplate
+		}
+	}
 }
 
 func (c *Config) validate() error {
@@ -127,6 +136,10 @@ func (c *Config) validate() error {
 
 		if p.NomadURL == "" {
 			return fmt.Errorf("profile %q: nomadUrl is required", p.Name)
+		}
+
+		if !strings.Contains(p.NodeHostnameTemplate, "{node}") {
+			return fmt.Errorf("profile %q: nodeHostnameTemplate must contain the %q placeholder", p.Name, "{node}")
 		}
 	}
 

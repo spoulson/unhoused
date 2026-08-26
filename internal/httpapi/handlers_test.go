@@ -120,8 +120,14 @@ func testConfig() *config.Config {
 	return &config.Config{
 		RefreshIntervalSeconds: 5,
 		Profiles: []config.Profile{
-			{Name: "prod-usw1", Environment: config.EnvironmentProduction, Region: config.RegionUSWest1},
-			{Name: "staging-euw1", Environment: config.EnvironmentStaging, Region: config.RegionEuropeWest1},
+			{
+				Name: "prod-usw1", Environment: config.EnvironmentProduction, Region: config.RegionUSWest1,
+				NodeHostnameTemplate: "{node}.c.mailforce-production-usw1.internal",
+			},
+			{
+				Name: "staging-euw1", Environment: config.EnvironmentStaging, Region: config.RegionEuropeWest1,
+				NodeHostnameTemplate: "{node}.node.europe-west1.staging.mailforce",
+			},
 		},
 	}
 }
