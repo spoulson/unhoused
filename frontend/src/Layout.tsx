@@ -56,27 +56,42 @@ export function Layout() {
               <span className={styles.icon} aria-hidden="true">
                 ▣
               </span>
-              <select
-                className={styles.profileSelect}
-                value={profileName}
-                onChange={(e) => handleProfileChange(e.target.value)}
-                disabled={isSwitchingProfile}
-                aria-label="Switch profile"
-              >
-                {!knownCurrentProfile && <option value={profileName}>{profileName}</option>}
-                {profilesData?.profiles.map((p) => (
-                  <option key={p.name} value={p.name}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <span className={styles.profileGroup}>
+                <Link to={`/profiles/${profileName}`}>{profileName}</Link>
+                {/* An inline SVG, not a Unicode glyph, since triangle/chevron characters render
+                    inconsistently (sometimes near-invisible) across the app's configured fonts. */}
+                <svg className={styles.dropdownArrow} aria-hidden="true" viewBox="0 0 10 6" width="10" height="6">
+                  <path
+                    d="M1 1l4 4 4-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <select
+                  className={styles.profileSelect}
+                  value={profileName}
+                  onChange={(e) => handleProfileChange(e.target.value)}
+                  disabled={isSwitchingProfile}
+                  aria-label="Switch profile"
+                >
+                  {!knownCurrentProfile && <option value={profileName}>{profileName}</option>}
+                  {profilesData?.profiles.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </span>
             </>
           )}
           {profileName && jobId && (
             <>
               {' / '}
               <span className={styles.icon} aria-hidden="true">
-                ▶
+                ⛟
               </span>
               <span className="mono">{jobId}</span>
             </>

@@ -265,7 +265,7 @@ export function ProfilePage() {
                       <td>
                         <Link to={`/profiles/${profileName}/jobs/${job.id}`} className={`mono ${styles.jobLink}`}>
                           <span className={styles.jobIcon} aria-hidden="true">
-                            ▶
+                            ⛟
                           </span>
                           {job.name}
                         </Link>

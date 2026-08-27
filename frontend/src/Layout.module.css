@@ -43,20 +43,40 @@
   margin-right: 0.35rem;
 }
 
-.profileSelect {
-  background: transparent;
-  border: none;
-  color: var(--gb-blue);
-  font: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
+.profileGroup {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
-.profileSelect:hover,
-.profileSelect:focus {
-  text-decoration: underline;
+.dropdownArrow {
+  flex: none;
+  width: 1rem;
+  margin-left: 0.15rem;
+  color: var(--gb-blue);
+  pointer-events: none;
+}
+
+/* Invisible but fully functional: sized and positioned to exactly cover the arrow (not the Link
+   beside it), so clicking/tapping/keyboard-focusing it opens the dropdown without stealing clicks
+   meant for the profile name. `disabled:not-allowed`/opacity intentionally aren't used here since
+   visibility, not affordance, is what's being suppressed — aria-label keeps it properly announced. */
+.profileSelect {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1rem;
+  opacity: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.profileSelect:focus-visible {
+  opacity: 1;
+  background: var(--gb-bg1);
 }
 
 .themeToggle {

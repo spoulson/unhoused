@@ -433,7 +433,7 @@ export function JobStatusPage() {
       <h1 className={styles.title}>
         Job:{' '}
         <span className={styles.icon} aria-hidden="true">
-          ▶
+          ⛟
         </span>
         {jobId}
         <StatusBadge status={data.job.status} />
