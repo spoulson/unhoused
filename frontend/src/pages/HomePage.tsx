@@ -24,10 +24,10 @@ export function HomePage() {
         {data?.profiles.map((profile) => (
           <li key={profile.name}>
             <Link to={`/profiles/${profile.name}`} className={styles.card}>
-              <span className={styles.name}>{profile.name}</span>
-              <span className={styles.meta}>
-                {profile.environment} · {profile.region}
+              <span className={styles.icon} aria-hidden="true">
+                ▣
               </span>
+              <span className={styles.name}>{profile.name}</span>
             </Link>
           </li>
         ))}

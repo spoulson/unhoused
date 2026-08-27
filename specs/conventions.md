@@ -13,6 +13,8 @@
   package.
 - Code should be readable to easily follow what it is doing.  And comments should be added to explain _why_ it's doing
   it, especially if it's not obvious.
+- Prefer `sync.WaitGroup`'s `Go()` method (Go 1.25+) over spawning goroutines with `go func()` plus manual
+  `Add()`/`Done()` bookkeeping.
 
 ## Makefiles
 

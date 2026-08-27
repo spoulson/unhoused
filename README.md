@@ -21,7 +21,7 @@ docker compose up
 ```
 
 Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy together, using
-`config.example.yaml` (placeholder Nomad URLs/tokens) as the backend's config.
+`config.yaml` as the backend's config.
 
 For live-reloading local iteration (source edits apply without a rebuild):
 
@@ -87,10 +87,9 @@ Service settings, top-level:
 | Field | Meaning |
 |---|---|
 | `name` | Profile identifier, shown in the UI |
-| `environment` | `staging` or `production` |
-| `region` | `us-west1`, `us-east4`, `europe-west1`, or `ause1` |
 | `nomadUrl` | Nomad HTTP API URL (usually port `4646`) |
 | `nomadToken` | Nomad API token, in plaintext |
+| `nodeHostnameTemplate` | Template for deriving each port's node address, with `{node}` replaced by the Nomad node name (e.g. `{node}.node.us-west1.staging.example.com`). Optional, defaults to `{node}` |
 
 Nomad tokens are only ever held by the backend — the frontend talks to the backend's REST API, never to Nomad directly.
 

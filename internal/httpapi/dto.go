@@ -11,9 +11,7 @@ type errorDetail struct {
 }
 
 type profileDTO struct {
-	Name        string `json:"name"`
-	Environment string `json:"environment"`
-	Region      string `json:"region"`
+	Name string `json:"name"`
 }
 
 type profilesResponse struct {
@@ -44,11 +42,11 @@ type versionGroupDTO struct {
 }
 
 type portDTO struct {
-	Label   string `json:"label"`
-	IP      string `json:"ip"`
-	Port    int    `json:"port"`
-	URL     string `json:"url"`
-	NodeURL string `json:"nodeUrl,omitempty"`
+	Label       string `json:"label"`
+	IP          string `json:"ip"`
+	Port        int    `json:"port"`
+	Address     string `json:"address"`
+	NodeAddress string `json:"nodeAddress"`
 }
 
 type allocationDTO struct {

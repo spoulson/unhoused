@@ -105,58 +105,39 @@ func TestGroupByVersion(t *testing.T) {
 	assert.Len(t, v2.StatusCounts, len(clientStatuses))
 }
 
-func TestPortURL(t *testing.T) {
-	got := portURL("10.0.0.5", 8080)
-	assert.Equal(t, "http://10.0.0.5:8080", got)
+func TestPortAddress(t *testing.T) {
+	got := portAddress("10.0.0.5", 8080)
+	assert.Equal(t, "10.0.0.5:8080", got)
 }
 
-func TestNodeURL(t *testing.T) {
+func TestNodeAddress(t *testing.T) {
 	tests := []struct {
 		name     string
-		env      config.Environment
-		region   config.Region
+		template string
 		nodeName string
 		port     int
 		want     string
-		wantErr  bool
 	}{
 		{
-			name: "staging", env: config.EnvironmentStaging, region: config.RegionUSWest1,
+			name: "staging-style template", template: "{node}.node.us-west1.staging.local",
 			nodeName: "node1", port: 8080,
-			want: "http://node1.node.us-west1.staging.mailforce:8080",
+			want: "node1.node.us-west1.staging.local:8080",
 		},
 		{
-			name: "production", env: config.EnvironmentProduction, region: config.RegionUSWest1,
+			name: "production-style template", template: "{node}.c.local-production-usw1.internal",
 			nodeName: "node1", port: 8080,
-			want: "http://node1.c.mailforce-production-usw1.internal:8080",
+			want: "node1.c.local-production-usw1.internal:8080",
 		},
 		{
-			name: "production europe-west1", env: config.EnvironmentProduction, region: config.RegionEuropeWest1,
+			name: "default template", template: "{node}",
 			nodeName: "node2", port: 443,
-			want: "http://node2.c.mailforce-production-euw1.internal:443",
-		},
-		{
-			name: "unknown environment", env: config.Environment("dev"), region: config.RegionUSWest1,
-			nodeName: "node1", port: 8080,
-			wantErr: true,
-		},
-		{
-			name: "unknown region", env: config.EnvironmentProduction, region: config.Region("mars"),
-			nodeName: "node1", port: 8080,
-			wantErr: true,
+			want: "node2:443",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := nodeURL(tt.env, tt.region, tt.nodeName, tt.port)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
+			got := nodeAddress(tt.template, tt.nodeName, tt.port)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -164,30 +145,28 @@ func TestNodeURL(t *testing.T) {
 
 func TestExtractPorts(t *testing.T) {
 	profile := config.Profile{
-		Environment: config.EnvironmentStaging,
-		Region:      config.RegionUSWest1,
+		NodeHostnameTemplate: "{node}.node.us-west1.staging.local",
 	}
 
 	ports := []nomadapi.PortMapping{
-		{Label: "http", Value: 8080, HostIP: "10.0.0.5"},
+		{Label: "app", Value: 8080, HostIP: "10.0.0.5"},
 		{Label: "metrics", Value: 9090, HostIP: "10.0.0.5"},
 	}
 
-	got, err := extractPorts(ports, "node1", profile)
-	require.NoError(t, err)
+	got := extractPorts(ports, "node1", profile)
 	require.Len(t, got, 2)
 
-	httpPort := got[0]
-	assert.Equal(t, "http://10.0.0.5:8080", httpPort.URL)
-	assert.Equal(t, "http://node1.node.us-west1.staging.mailforce:8080", httpPort.NodeURL)
+	appPort := got[0]
+	assert.Equal(t, "10.0.0.5:8080", appPort.Address)
+	assert.Equal(t, "node1.node.us-west1.staging.local:8080", appPort.NodeAddress)
 
 	metricsPort := got[1]
-	assert.Empty(t, metricsPort.NodeURL)
+	assert.Equal(t, "10.0.0.5:9090", metricsPort.Address)
+	assert.Equal(t, "node1.node.us-west1.staging.local:9090", metricsPort.NodeAddress)
 }
 
 func TestExtractPortsNoPorts(t *testing.T) {
-	got, err := extractPorts(nil, "node1", config.Profile{})
-	require.NoError(t, err)
+	got := extractPorts(nil, "node1", config.Profile{})
 	assert.Empty(t, got)
 }
 

@@ -14,23 +14,18 @@ import styles from './JobStatusPage.module.css'
 // alphabetical order the Status filter dropdown uses, see STATUS_FILTER_OPTIONS below.
 const CLIENT_STATUSES: ClientStatus[] = ['running', 'pending', 'failed', 'complete', 'lost']
 
-// Nomad's fixed set of allocation DesiredStatus values (github.com/hashicorp/nomad/api: AllocDesiredStatus*).
-const DESIRED_STATUSES = ['run', 'stop', 'evict']
-
 // Filter dropdown options are sorted ascending (Version, from the backend, is the one exception — sorted
-// numerically descending). CLIENT_STATUSES/DESIRED_STATUSES keep their own order for other uses above.
+// numerically descending). CLIENT_STATUSES keeps its own order for other uses above.
 const STATUS_FILTER_OPTIONS = [...CLIENT_STATUSES].sort()
-const DESIRED_FILTER_OPTIONS = [...DESIRED_STATUSES].sort()
 
 interface Filters {
   taskGroup: string
   version: string
   node: string
   status: string
-  desired: string
 }
 
-const EMPTY_FILTERS: Filters = { taskGroup: '', version: '', node: '', status: '', desired: '' }
+const EMPTY_FILTERS: Filters = { taskGroup: '', version: '', node: '', status: '' }
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[]
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200]
@@ -250,32 +245,30 @@ function Pagination({ page, totalPages, pageSize, pageSizeOptions, onPageChange,
   )
 }
 
-function UrlRow({ url, index, copyLabel }: { url: string; index: number; copyLabel: string }) {
+function AddressRow({ address, index, copyLabel }: { address: string; index: number; copyLabel: string }) {
   return (
     <span className={`${styles.copyableField} ${styles.urlRow} ${index % 2 === 1 ? styles.urlRowAlt : ''}`}>
-      <a href={url} target="_blank" rel="noreferrer" className="mono">
-        {url}
-      </a>
-      <CopyButton value={url} label={copyLabel} />
+      <span className="mono">{address}</span>
+      <CopyButton value={address} label={copyLabel} />
     </span>
   )
 }
 
-function PortLinks({ ports }: { ports: Port[] }) {
+function PortAddresses({ ports }: { ports: Port[] }) {
   // Rows are indexed continuously across all ports (not reset per port) so the alternating
-  // background gives visual contrast between every URL line, while port name labels stay plain.
+  // background gives visual contrast between every address line, while port name labels stay plain.
   let rowIndex = 0
 
   return (
     <div className={styles.ports}>
       {ports.map((port) => {
-        const urlIndex = rowIndex++
-        const nodeUrlIndex = port.nodeUrl ? rowIndex++ : -1
+        const addressIndex = rowIndex++
+        const nodeAddressIndex = rowIndex++
         return (
           <div key={`${port.label}-${port.port}`} className={styles.port}>
             <span className={styles.portLabel}>{port.label}</span>
-            <UrlRow url={port.url} index={urlIndex} copyLabel="Copy port URL" />
-            {port.nodeUrl && <UrlRow url={port.nodeUrl} index={nodeUrlIndex} copyLabel="Copy node URL" />}
+            <AddressRow address={port.address} index={addressIndex} copyLabel="Copy port address" />
+            <AddressRow address={port.nodeAddress} index={nodeAddressIndex} copyLabel="Copy node address" />
           </div>
         )
       })}
@@ -309,7 +302,6 @@ export function JobStatusPage() {
     version: filters.version,
     node: filters.node,
     status: filters.status,
-    desired: filters.desired,
     sort: sort.direction !== 'none' ? sort.column : undefined,
     dir: sort.direction !== 'none' ? sort.direction : undefined,
     page,
@@ -439,7 +431,14 @@ export function JobStatusPage() {
   return (
     <div>
       <h1 className={styles.title}>
-        {pageTitle} <StatusBadge status={data.job.status} />
+        Job:{' '}
+        <span className={styles.icon} aria-hidden="true">
+          ⛟
+        </span>
+        {jobId}
+        <span className={styles.statusBadge}>
+          <StatusBadge status={data.job.status} />
+        </span>
       </h1>
 
       <h2>Versions</h2>
@@ -468,7 +467,7 @@ export function JobStatusPage() {
                   onClick={() => handleVersionStatusClick(group.version, status)}
                   title={`Filter allocations to version ${group.version}, ${status}`}
                 >
-                  <StatusBadge status={status} /> {group.statusCounts[status]}
+                  <StatusBadge status={status} /> <span className="mono">{group.statusCounts[status]}</span>
                 </button>
               ))}
             </div>
@@ -501,18 +500,6 @@ export function JobStatusPage() {
           />
           <div className={styles.filterBar}>
             <FilterSelect
-              label="Task Group"
-              value={filters.taskGroup}
-              options={data.filterOptions.taskGroups}
-              onChange={(v) => setFilter('taskGroup', v)}
-            />
-            <FilterSelect
-              label="Version"
-              value={filters.version}
-              options={data.filterOptions.versions.map(String)}
-              onChange={(v) => setFilter('version', v)}
-            />
-            <FilterSelect
               label="Node"
               value={filters.node}
               options={data.filterOptions.nodes}
@@ -525,10 +512,16 @@ export function JobStatusPage() {
               onChange={(v) => setFilter('status', v)}
             />
             <FilterSelect
-              label="Desired"
-              value={filters.desired}
-              options={DESIRED_FILTER_OPTIONS}
-              onChange={(v) => setFilter('desired', v)}
+              label="Task Group"
+              value={filters.taskGroup}
+              options={data.filterOptions.taskGroups}
+              onChange={(v) => setFilter('taskGroup', v)}
+            />
+            <FilterSelect
+              label="Version"
+              value={filters.version}
+              options={data.filterOptions.versions.map(String)}
+              onChange={(v) => setFilter('version', v)}
             />
             {hasActiveFilters && (
               <button type="button" className={styles.clearFilters} onClick={handleClearFilters}>
@@ -551,7 +544,6 @@ export function JobStatusPage() {
                     <SortableHeader column="id" label="Allocation" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="node" label="Node" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="status" label="Status" sort={sort} onClick={handleSortClick} />
-                    <SortableHeader column="desired" label="Desired" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="taskGroup" label="Task Group" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="version" label="Version" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="lastModified" label="Last Modified" sort={sort} onClick={handleSortClick} />
@@ -582,12 +574,11 @@ export function JobStatusPage() {
                       <td>
                         <StatusBadge status={alloc.clientStatus} />
                       </td>
-                      <td>{alloc.desiredStatus}</td>
                       <td>{alloc.taskGroup}</td>
                       <td>{alloc.version}</td>
                       <td>{formatDuration(alloc.lastModifiedSeconds)}</td>
                       <td>
-                        <PortLinks ports={alloc.ports} />
+                        <PortAddresses ports={alloc.ports} />
                       </td>
                     </tr>
                   ))}

@@ -1,3 +1,15 @@
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon {
+  font-size: 1.1em;
+  line-height: 1;
+  color: var(--gb-blue);
+}
+
 .search {
   display: block;
   width: 100%;
@@ -80,6 +92,17 @@
 .table a {
   text-decoration: none;
   font-weight: 600;
+}
+
+.jobLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jobIcon {
+  font-size: 0.85em;
+  color: var(--gb-blue);
 }
 
 .pagination {

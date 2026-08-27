@@ -86,6 +86,21 @@ func TestLRUCacheDoesNotExpireEarly(t *testing.T) {
 	assert.Equal(t, 1, got)
 }
 
+func TestLRUCacheZeroTTLNeverExpires(t *testing.T) {
+	cache := newLRUCache[string, int](2, 0)
+
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	cache.now = func() time.Time { return now }
+
+	cache.Set("a", 1)
+
+	now = now.Add(365 * 24 * time.Hour)
+
+	got, ok := cache.Get("a")
+	require.True(t, ok, "zero-TTL entry should never expire on its own")
+	assert.Equal(t, 1, got)
+}
+
 func TestLRUCacheSetResetsTTL(t *testing.T) {
 	cache := newLRUCache[string, int](2, time.Minute)
 

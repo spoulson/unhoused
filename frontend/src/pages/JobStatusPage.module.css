@@ -4,6 +4,19 @@
   gap: 0.75rem;
 }
 
+.icon {
+  font-size: 1.1em;
+  line-height: 1;
+  color: var(--gb-blue);
+}
+
+/* StatusBadge sizes itself relative to its surrounding font-size (0.85em); reset that to the
+   page's base size here so the badge doesn't inherit the <h1>'s large font-size and end up
+   rendering bigger than the heading text itself. */
+.statusBadge {
+  font-size: 1rem;
+}
+
 .versionGroups {
   display: flex;
   flex-direction: column;
@@ -42,11 +55,10 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: var(--font-mono);
   background: none;
   border: none;
   color: inherit;
-  font-size: inherit;
+  font: inherit;
   padding: 0;
   cursor: pointer;
 }
@@ -223,8 +235,8 @@
 }
 
 .urlRow {
-  width: 100%;
   box-sizing: border-box;
+  margin-left: 1rem;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
 }

@@ -1,19 +1,14 @@
-# Example unhoused configuration. Copy to config.yaml and adjust, then run:
-#   go run . -c config.yaml
-
 httpPublicUrl: http://localhost
 listenPort: 3001
 refreshIntervalSeconds: 5
 
 profiles:
   - name: prod-usw1
-    environment: production
-    region: us-west1
     nomadUrl: http://127.0.0.1:4646
-    nomadToken: ""
+    nomadToken: "xxx"
+    nodeHostnameTemplate: "{node}.foobar.local"
 
   - name: staging-euw1
-    environment: staging
-    region: europe-west1
     nomadUrl: http://127.0.0.1:4646
-    nomadToken: ""
+    nomadToken: "xxx"
+    nodeHostnameTemplate: "{node}.foobar.dev"

@@ -73,16 +73,11 @@ fields:
   - Task group name
   - Version number
   - Last Modified
-  - For each network port defined, link to its IP:port as URL like: `http://<ip>:<port>`.
-    - And if the port is labeled `http`, also include a link to the node like: `http://<host>:<port>`.
-      - `host` is a hostname value derived from the Nomad node name with special rules based on the Nomad environment and region:
-        - For environment "staging", `host` follows format: `http://<node_name>.node.<region>.staging.mailforce:<port>`.
-        - For environment "production", `host` follows format: `http://<node_name>.c.mailforce-production-<short_region>.internal:<port>`.
-      - `short_region` is derived from `region` as:
-        - `us-east4` -> `use4`
-        - `us-west1` -> `usw1`
-        - `europe-west1` -> `euw1`
-        - `ause1` -> `ause1`
+  - For each network port defined, list its address as `<ip>:<port>`.
+    - Also list the node's address as `<host>:<port>`.
+      - `host` is derived from the profile's configured node hostname template (see
+        [specs/configuration.md](configuration.md)), substituting the literal placeholder `{node}`
+        with the Nomad node name.
 - Search matches Allocation ID, Node name, or Node IP.
 - Filter dropdowns: task group, version, and node (options drawn from the job's actual allocations), plus
   status and desired (options are Nomad's fixed enums for those fields). Version's options are sorted

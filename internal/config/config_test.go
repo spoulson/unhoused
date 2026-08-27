@@ -23,8 +23,6 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	path := writeConfigFile(t, `
 profiles:
   - name: prod-usw1
-    environment: production
-    region: us-west1
     nomadUrl: http://10.0.0.1:4646
     nomadToken: secret
 `)
@@ -35,6 +33,7 @@ profiles:
 	assert.Equal(t, defaultHTTPPublicURL, cfg.HTTPPublicURL)
 	assert.Equal(t, defaultListenPort, cfg.ListenPort)
 	assert.Equal(t, defaultRefreshIntervalSeconds, cfg.RefreshIntervalSeconds)
+	assert.Equal(t, defaultNodeHostnameTemplate, cfg.Profiles[0].NodeHostnameTemplate)
 }
 
 func TestLoadHonorsExplicitValues(t *testing.T) {
@@ -44,10 +43,9 @@ listenPort: 9000
 refreshIntervalSeconds: 10
 profiles:
   - name: staging-euw1
-    environment: staging
-    region: europe-west1
     nomadUrl: http://10.0.0.2:4646
     nomadToken: secret
+    nodeHostnameTemplate: "{node}.example.internal"
 `)
 
 	cfg, err := Load(path)
@@ -56,6 +54,7 @@ profiles:
 	assert.Equal(t, "https://unhoused.example.com", cfg.HTTPPublicURL)
 	assert.Equal(t, 9000, cfg.ListenPort)
 	assert.Equal(t, 10, cfg.RefreshIntervalSeconds)
+	assert.Equal(t, "{node}.example.internal", cfg.Profiles[0].NodeHostnameTemplate)
 }
 
 func TestLoadValidationErrors(t *testing.T) {
@@ -73,9 +72,7 @@ func TestLoadValidationErrors(t *testing.T) {
 			name: "missing profile name",
 			yaml: `
 profiles:
-  - environment: staging
-    region: us-west1
-    nomadUrl: http://10.0.0.1:4646
+  - nomadUrl: http://10.0.0.1:4646
 `,
 			wantErr: "name is required",
 		},
@@ -84,47 +81,29 @@ profiles:
 			yaml: `
 profiles:
   - name: dup
-    environment: staging
-    region: us-west1
     nomadUrl: http://10.0.0.1:4646
   - name: dup
-    environment: production
-    region: us-east4
     nomadUrl: http://10.0.0.2:4646
 `,
 			wantErr: "duplicate profile name",
-		},
-		{
-			name: "invalid environment",
-			yaml: `
-profiles:
-  - name: bad-env
-    environment: dev
-    region: us-west1
-    nomadUrl: http://10.0.0.1:4646
-`,
-			wantErr: "invalid environment",
-		},
-		{
-			name: "invalid region",
-			yaml: `
-profiles:
-  - name: bad-region
-    environment: staging
-    region: mars
-    nomadUrl: http://10.0.0.1:4646
-`,
-			wantErr: "invalid region",
 		},
 		{
 			name: "missing nomad url",
 			yaml: `
 profiles:
   - name: no-url
-    environment: staging
-    region: us-west1
 `,
 			wantErr: "nomadUrl is required",
+		},
+		{
+			name: "invalid nodeHostnameTemplate",
+			yaml: `
+profiles:
+  - name: bad-template
+    nomadUrl: http://10.0.0.1:4646
+    nodeHostnameTemplate: "static.example.com"
+`,
+			wantErr: "nodeHostnameTemplate must contain",
 		},
 	}
 
@@ -142,32 +121,4 @@ profiles:
 func TestLoadMissingFile(t *testing.T) {
 	_, err := Load(filepath.Join(t.TempDir(), "does-not-exist.yaml"))
 	require.Error(t, err)
-}
-
-func TestShortRegion(t *testing.T) {
-	tests := []struct {
-		region  Region
-		want    string
-		wantErr bool
-	}{
-		{RegionUSWest1, "usw1", false},
-		{RegionUSEast4, "use4", false},
-		{RegionEuropeWest1, "euw1", false},
-		{RegionAUSE1, "ause1", false},
-		{Region("mars"), "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.region), func(t *testing.T) {
-			got, err := ShortRegion(tt.region)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
 }

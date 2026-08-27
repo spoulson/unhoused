@@ -16,7 +16,8 @@ type lruEntry[K comparable, V any] struct {
 // lruCache is a fixed-capacity, thread-safe cache. Entries are evicted
 // least-recently-used first once the cache is over capacity, and are treated
 // as absent once their TTL (set per-cache, applied per-entry on write) has
-// passed.
+// passed. A zero or negative ttl means entries never expire on their own —
+// eviction happens only via LRU capacity overflow.
 type lruCache[K comparable, V any] struct {
 	mu       sync.Mutex
 	capacity int
@@ -27,7 +28,8 @@ type lruCache[K comparable, V any] struct {
 }
 
 // newLRUCache creates a cache holding at most capacity entries, each expiring
-// ttl after it was last written.
+// ttl after it was last written. Pass ttl <= 0 for entries that never expire
+// on their own, relying solely on LRU capacity eviction.
 func newLRUCache[K comparable, V any](capacity int, ttl time.Duration) *lruCache[K, V] {
 	return &lruCache[K, V]{
 		capacity: capacity,
@@ -52,7 +54,7 @@ func (c *lruCache[K, V]) Get(key K) (V, bool) {
 
 	entry := elem.Value.(*lruEntry[K, V])
 
-	expired := c.now().After(entry.expiresAt)
+	expired := c.ttl > 0 && c.now().After(entry.expiresAt)
 	if expired {
 		c.order.Remove(elem)
 		delete(c.items, key)
