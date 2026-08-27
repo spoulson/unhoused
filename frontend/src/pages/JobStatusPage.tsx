@@ -436,7 +436,9 @@ export function JobStatusPage() {
           ⛟
         </span>
         {jobId}
-        <StatusBadge status={data.job.status} />
+        <span className={styles.statusBadge}>
+          <StatusBadge status={data.job.status} />
+        </span>
       </h1>
 
       <h2>Versions</h2>
@@ -465,7 +467,7 @@ export function JobStatusPage() {
                   onClick={() => handleVersionStatusClick(group.version, status)}
                   title={`Filter allocations to version ${group.version}, ${status}`}
                 >
-                  <StatusBadge status={status} /> {group.statusCounts[status]}
+                  <StatusBadge status={status} /> <span className="mono">{group.statusCounts[status]}</span>
                 </button>
               ))}
             </div>

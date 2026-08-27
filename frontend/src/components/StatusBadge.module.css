@@ -5,6 +5,11 @@
   padding: 0.15em 0.6em;
   border-radius: 999px;
   font-size: 0.85em;
+  /* Explicit rather than inherited: when a badge sits inside a flex container (e.g. the Versions
+     section's status-count buttons), its inline-flex display gets blockified to flex per the CSS
+     spec, which drops the inherited line-height math a plain inline element would otherwise use —
+     leaving the badge visibly shorter than the same badge in a non-flex context like a table cell. */
+  line-height: 1.5;
   font-weight: 600;
   color: var(--gb-bg0);
   text-transform: capitalize;
