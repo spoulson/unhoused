@@ -6,7 +6,6 @@ package nomadclient
 import (
 	"context"
 	"net/http"
-	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
 )
@@ -24,7 +23,10 @@ type API interface {
 
 const (
 	allocationPortsCacheCapacity = 512
-	allocationPortsCacheTTL      = 5 * time.Minute
+	// allocationPortsCacheTTL is 0 (never expire): an allocation's ports and
+	// node IP never change once assigned, so cached entries stay valid until
+	// evicted by LRU capacity overflow rather than on a timer.
+	allocationPortsCacheTTL = 0
 )
 
 // AllocationPorts is the network-reachability info for an allocation: its
@@ -128,8 +130,8 @@ func (c *Client) AllocationInfo(ctx context.Context, allocID string) (*nomadapi.
 
 // GetAllocationPorts returns the network ports assigned to an allocation and
 // the IP of the node it's running on, fetched via AllocationInfo. Results are
-// cached per allocation ID for allocationPortsCacheTTL, since this
-// information doesn't change for an allocation's lifetime.
+// cached per allocation ID indefinitely (see allocationPortsCacheTTL), since
+// this information doesn't change for an allocation's lifetime.
 func (c *Client) GetAllocationPorts(ctx context.Context, allocID string) (AllocationPorts, error) {
 	cached, ok := c.allocationPorts.Get(allocID)
 	if ok {
