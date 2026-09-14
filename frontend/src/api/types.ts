@@ -30,6 +30,8 @@ export interface Job {
 
 export interface VersionGroup {
   version: number
+  dockerImage: string
+  taggedTime: string
   newestAllocationLastModifiedSeconds: number
   statusCounts: Record<ClientStatus, number>
 }
@@ -50,6 +52,8 @@ export interface Allocation {
   desiredStatus: string
   taskGroup: string
   version: number
+  dockerImage: string
+  taggedTime: string
   lastModifiedSeconds: number
   ports: Port[]
 }

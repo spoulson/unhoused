@@ -115,10 +115,12 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	now := s.now()
 	submitTimes := versionSubmitTimes(versions)
+	images := versionDockerImages(client, jobID, versions)
+	taggedTimes := versionTaggedTimes(versions)
 	// versionGroups and filterOptions reflect ALL of the job's allocations,
 	// unaffected by the table filters/pagination below — they represent
 	// overall job health and the full set of possible filter values.
-	versionGroups := groupByVersion(allocStubs, submitTimes, now)
+	versionGroups := groupByVersion(allocStubs, submitTimes, images, taggedTimes, now)
 	filterOptions := allocationFilterOptions(allocStubs)
 
 	query := r.URL.Query()
@@ -196,6 +198,8 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 				DesiredStatus:       stub.DesiredStatus,
 				TaskGroup:           stub.TaskGroup,
 				Version:             stub.JobVersion,
+				DockerImage:         images[stub.JobVersion],
+				TaggedTime:          taggedTimes[stub.JobVersion],
 				LastModifiedSeconds: lastModifiedSeconds(submitTimes[stub.JobVersion], now),
 				Ports:               ports,
 			}

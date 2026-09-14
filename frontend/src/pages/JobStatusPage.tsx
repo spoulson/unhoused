@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useJobStatus } from '../api/queries'
 import type { ClientStatus, Port } from '../api/types'
@@ -6,8 +6,10 @@ import { CopyButton } from '../components/CopyButton'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
+import { VersionLabel } from '../components/VersionLabel'
 import { formatDuration } from '../lib/duration'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
+import { formatVersionLabel } from '../lib/version'
 import styles from './JobStatusPage.module.css'
 
 // Order shown in the Versions summary badges (running first, as the state that matters most) — not the
@@ -170,9 +172,11 @@ interface FilterSelectProps {
   value: string
   options: string[]
   onChange: (value: string) => void
+  /** Formats an option's displayed label; the underlying filter value (and selection) stays the raw option. */
+  formatOption?: (option: string) => string
 }
 
-function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
+function FilterSelect({ label, value, options, onChange, formatOption }: FilterSelectProps) {
   return (
     <label className={styles.filter}>
       <span className={styles.filterLabel}>{label}</span>
@@ -180,7 +184,7 @@ function FilterSelect({ label, value, options, onChange }: FilterSelectProps) {
         <option value="">All</option>
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {formatOption ? formatOption(option) : option}
           </option>
         ))}
       </select>
@@ -307,6 +311,15 @@ export function JobStatusPage() {
     page,
     pageSize,
   })
+
+  // Maps version -> {taggedTime, dockerImage} for the Version filter dropdown's labels, since
+  // filterOptions.versions is just numbers; versionGroups (unaffected by pagination/filters) always covers
+  // the same version set.
+  const versionMeta = useMemo(
+    () =>
+      new Map(data?.versionGroups.map((g) => [g.version, { taggedTime: g.taggedTime, dockerImage: g.dockerImage }])),
+    [data?.versionGroups],
+  )
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -453,7 +466,9 @@ export function JobStatusPage() {
         {paginatedVersionGroups.map((group) => (
           <div key={group.version} className={styles.versionGroup}>
             <div className={styles.versionHeader}>
-              <span>Version {group.version}</span>
+              <span>
+                Version <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
+              </span>
               <span className={styles.lastModified}>
                 last modified {formatDuration(group.newestAllocationLastModifiedSeconds)}
               </span>
@@ -522,6 +537,10 @@ export function JobStatusPage() {
               value={filters.version}
               options={data.filterOptions.versions.map(String)}
               onChange={(v) => setFilter('version', v)}
+              formatOption={(v) => {
+                const meta = versionMeta.get(Number(v))
+                return formatVersionLabel(Number(v), meta?.taggedTime ?? '', meta?.dockerImage ?? '')
+              }}
             />
             {hasActiveFilters && (
               <button type="button" className={styles.clearFilters} onClick={handleClearFilters}>
@@ -575,7 +594,9 @@ export function JobStatusPage() {
                         <StatusBadge status={alloc.clientStatus} />
                       </td>
                       <td>{alloc.taskGroup}</td>
-                      <td>{alloc.version}</td>
+                      <td>
+                        <VersionLabel version={alloc.version} taggedTime={alloc.taggedTime} dockerImage={alloc.dockerImage} />
+                      </td>
                       <td>{formatDuration(alloc.lastModifiedSeconds)}</td>
                       <td>
                         <PortAddresses ports={alloc.ports} />

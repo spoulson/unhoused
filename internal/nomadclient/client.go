@@ -6,6 +6,7 @@ package nomadclient
 import (
 	"context"
 	"net/http"
+	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
 )
@@ -18,6 +19,7 @@ type API interface {
 	JobAllocations(ctx context.Context, jobID string) ([]*nomadapi.AllocationListStub, error)
 	AllocationInfo(ctx context.Context, allocID string) (*nomadapi.Allocation, error)
 	GetAllocationPorts(ctx context.Context, allocID string) (AllocationPorts, error)
+	JobVersionDockerImage(jobID string, version uint64, job *nomadapi.Job) string
 	ListNodes(ctx context.Context) ([]*nomadapi.NodeListStub, error)
 }
 
@@ -27,7 +29,20 @@ const (
 	// node IP never change once assigned, so cached entries stay valid until
 	// evicted by LRU capacity overflow rather than on a timer.
 	allocationPortsCacheTTL = 0
+
+	jobVersionImageCacheCapacity = 2048
+	// jobVersionImageCacheTTL is 0 (never expire): a job version's task
+	// config, and thus its Docker image, is immutable once that version
+	// exists, so cached entries stay valid until evicted by LRU capacity
+	// overflow rather than on a timer.
+	jobVersionImageCacheTTL = 0
 )
+
+// jobVersionKey identifies a single job version for jobVersionImages caching.
+type jobVersionKey struct {
+	jobID   string
+	version uint64
+}
 
 // AllocationPorts is the network-reachability info for an allocation: its
 // assigned ports and the IP of the node it's running on.
@@ -38,8 +53,9 @@ type AllocationPorts struct {
 
 // Client is the real API implementation backed by the Nomad SDK.
 type Client struct {
-	nomad           *nomadapi.Client
-	allocationPorts *lruCache[string, AllocationPorts]
+	nomad            *nomadapi.Client
+	allocationPorts  *lruCache[string, AllocationPorts]
+	jobVersionImages *lruCache[jobVersionKey, string]
 }
 
 var _ API = (*Client)(nil)
@@ -66,8 +82,9 @@ func New(addr, token string) (*Client, error) {
 	}
 
 	client := &Client{
-		nomad:           nomad,
-		allocationPorts: newLRUCache[string, AllocationPorts](allocationPortsCacheCapacity, allocationPortsCacheTTL),
+		nomad:            nomad,
+		allocationPorts:  newLRUCache[string, AllocationPorts](allocationPortsCacheCapacity, allocationPortsCacheTTL),
+		jobVersionImages: newLRUCache[jobVersionKey, string](jobVersionImageCacheCapacity, jobVersionImageCacheTTL),
 	}
 
 	return client, nil
@@ -153,6 +170,64 @@ func (c *Client) GetAllocationPorts(ctx context.Context, allocID string) (Alloca
 	c.allocationPorts.Set(allocID, result)
 
 	return result, nil
+}
+
+// DockerImageFromJob returns the Docker image (with tag) configured on the
+// job's first docker-driver task, walking task groups then tasks in order. A
+// job can have multiple docker tasks with different images; this returns
+// only the first one found. Returns "" if the job has no docker-driver task.
+func DockerImageFromJob(job *nomadapi.Job) string {
+	if job == nil {
+		return ""
+	}
+
+	for _, tg := range job.TaskGroups {
+		if tg == nil {
+			continue
+		}
+		for _, task := range tg.Tasks {
+			if task == nil || task.Driver != "docker" {
+				continue
+			}
+			image, ok := task.Config["image"].(string)
+			if ok && image != "" {
+				return image
+			}
+		}
+	}
+
+	return ""
+}
+
+// VersionTaggedTime returns the time job's Nomad version tag was applied,
+// and whether the version has a tag at all (via `nomad job tag apply`).
+// Unlike a version's task config, a tag can be added, changed, or removed
+// after the version itself is created — so, unlike DockerImageFromJob, this
+// must always be read fresh rather than cached.
+func VersionTaggedTime(job *nomadapi.Job) (time.Time, bool) {
+	if job == nil || job.VersionTag == nil {
+		return time.Time{}, false
+	}
+	return time.Unix(0, job.VersionTag.TaggedTime), true
+}
+
+// JobVersionDockerImage returns the Docker image (with tag) for jobID at
+// version, derived from that version's job spec (job) and cached
+// indefinitely afterward: a job version's task config never changes once
+// that version exists, so this never needs to be recomputed for a version
+// already seen (see jobVersionImageCacheTTL).
+func (c *Client) JobVersionDockerImage(jobID string, version uint64, job *nomadapi.Job) string {
+	key := jobVersionKey{jobID: jobID, version: version}
+
+	cached, ok := c.jobVersionImages.Get(key)
+	if ok {
+		return cached
+	}
+
+	image := DockerImageFromJob(job)
+	c.jobVersionImages.Set(key, image)
+
+	return image
 }
 
 // ListNodes returns the cluster's nodes. Used to resolve node IPs for the

@@ -62,6 +62,15 @@ its specific fields/columns, and its defaults — this section describes the sha
   - The version list uses the same pagination control described above (Previous/Next, adjustable page
     size, "Showing X–Y of Z versions" summary), but with its own page size options (5/10/25/50) and
     defaults to 5 per page.
+  - Each version is labeled "Version" followed by its version number, its Nomad version-tag time (if the
+    version has been tagged via `nomad job tag apply`), and its Docker image tag (if that version has a
+    docker-driver task), in the format `Version <version-number> tagged-at=<tagged-time-rfc3339>
+    image=<docker-image>:<tag>`. Either or both of the ` tagged-at=<tagged-time-rfc3339>` and
+    ` image=<docker-image>:<tag>` segments are omitted when that data isn't available for the version,
+    falling back to just `Version <version-number>` when neither is. The version number, the `tagged-at=`/
+    `image=` keys, the tagged time, and the image are each syntax-highlighted in a distinct color to keep
+    the value readable at a glance (see below wherever this format is reused, except the Version filter
+    dropdown, whose native options can only render plain text).
   - Clicking a status count (e.g. "✓ Running 2") sets the Allocations table's version and status filters to
     that version and status, replacing whatever filters were previously set.
 - Below the status groups is the full list of allocations in tabular layout.  This includes
@@ -71,7 +80,9 @@ fields:
   - Node IP
   - Current status and desired status
   - Task group name
-  - Version number
+  - Version number, followed by its tagged time and Docker image tag the same way as the version list above
+    (see above), but without the leading "Version" word (redundant with the column header):
+    `<version-number> tagged-at=<tagged-time-rfc3339> image=<docker-image>:<tag>`
   - Last Modified
   - For each network port defined, list its address as `<ip>:<port>`.
     - Also list the node's address as `<host>:<port>`.
@@ -81,7 +92,9 @@ fields:
 - Search matches Allocation ID, Node name, or Node IP.
 - Filter dropdowns: task group, version, and node (options drawn from the job's actual allocations), plus
   status and desired (options are Nomad's fixed enums for those fields). Version's options are sorted
-  numerically descending (newest first); every other dropdown's options are sorted ascending.
+  numerically descending (newest first) and labeled the same way as the Allocations table's Version column
+  above (no leading "Version" word — redundant with the dropdown's own "Version" label); every other
+  dropdown's options are sorted ascending.
 - Sortable columns: Allocation, Node, Status, Desired, Task Group, Version, Last Modified (Ports is not
   sortable). Default sort is Last Modified, ascending (most recently modified allocations first).
 - URL query params: `q` (search), `taskGroup`/`version`/`node`/`status`/`desired` (filters), `sort`/`dir`
