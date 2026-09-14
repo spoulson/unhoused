@@ -9,7 +9,8 @@ import (
 )
 
 // loggingTransport wraps an http.RoundTripper to log every HTTP request and
-// response made to the Nomad API.
+// response made to the Nomad API, plus an error-level log if the round trip
+// itself fails (e.g. connection refused, timeout, DNS failure).
 type loggingTransport struct {
 	base http.RoundTripper
 }
@@ -43,6 +44,12 @@ func (t *loggingTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	resp, err := base.RoundTrip(req)
 	if err != nil {
+		slog.Error("nomad request failed",
+			"method", req.Method,
+			"url", req.URL.String(),
+			"error", err,
+			slog.Duration("elapsed", time.Since(start)),
+		)
 		return resp, err
 	}
 
