@@ -37,6 +37,8 @@ type jobDTO struct {
 
 type versionGroupDTO struct {
 	Version                             uint64         `json:"version"`
+	DockerImage                         string         `json:"dockerImage"`
+	TaggedTime                          string         `json:"taggedTime"`
 	NewestAllocationLastModifiedSeconds int64          `json:"newestAllocationLastModifiedSeconds"`
 	StatusCounts                        map[string]int `json:"statusCounts"`
 }
@@ -57,6 +59,8 @@ type allocationDTO struct {
 	DesiredStatus       string    `json:"desiredStatus"`
 	TaskGroup           string    `json:"taskGroup"`
 	Version             uint64    `json:"version"`
+	DockerImage         string    `json:"dockerImage"`
+	TaggedTime          string    `json:"taggedTime"`
 	LastModifiedSeconds int64     `json:"lastModifiedSeconds"`
 	Ports               []portDTO `json:"ports"`
 }

@@ -213,3 +213,24 @@ func TestLoggingTransportPropagatesTransportError(t *testing.T) {
 	_, err := transport.RoundTrip(newRequest(t))
 	assert.ErrorIs(t, err, io.ErrClosedPipe)
 }
+
+func TestLoggingTransportLogsRequestFailure(t *testing.T) {
+	var logs bytes.Buffer
+
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	defer slog.SetDefault(originalLogger)
+
+	base := &fakeRoundTripper{err: io.ErrClosedPipe}
+	transport := &loggingTransport{base: base}
+
+	_, err := transport.RoundTrip(newRequest(t))
+	require.Error(t, err)
+
+	output := logs.String()
+	assert.Contains(t, output, `msg="nomad request failed"`)
+	assert.Contains(t, output, "method=GET")
+	assert.Contains(t, output, "url=http://nomad.example.com/v1/jobs")
+	assert.Contains(t, output, `error="`+io.ErrClosedPipe.Error()+`"`)
+	assert.NotContains(t, output, `msg="nomad response"`, "a failed round trip has no response to log")
+}

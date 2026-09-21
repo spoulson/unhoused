@@ -91,6 +91,10 @@ func (f *fakeNomad) GetAllocationPorts(_ context.Context, allocID string) (nomad
 	return result, nil
 }
 
+func (f *fakeNomad) JobVersionDockerImage(_ string, _ uint64, job *nomadapi.Job) string {
+	return nomadclient.DockerImageFromJob(job)
+}
+
 func (f *fakeNomad) ListNodes(context.Context) ([]*nomadapi.NodeListStub, error) {
 	return f.nodes, f.nodesErr
 }
@@ -227,7 +231,18 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 			Stop:   ptr(false),
 		},
 		versions: []*nomadapi.Job{
-			{Version: ptr(uint64(3)), SubmitTime: ptr(submitTime.UnixNano())},
+			{
+				Version:    ptr(uint64(3)),
+				SubmitTime: ptr(submitTime.UnixNano()),
+				VersionTag: &nomadapi.JobVersionTag{Name: "release", TaggedTime: 1_754_006_400_000000000},
+				TaskGroups: []*nomadapi.TaskGroup{
+					{
+						Tasks: []*nomadapi.Task{
+							{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.2.3"}},
+						},
+					},
+				},
+			},
 		},
 		allocs: []*nomadapi.AllocationListStub{
 			{
@@ -269,6 +284,8 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	require.Len(t, got.VersionGroups, 1)
 	vg := got.VersionGroups[0]
 	assert.EqualValues(t, 3, vg.Version)
+	assert.Equal(t, "myrepo/web:1.2.3", vg.DockerImage)
+	assert.Equal(t, time.Unix(0, 1_754_006_400_000000000).Format(time.RFC3339), vg.TaggedTime)
 	assert.Equal(t, int64(1234), vg.NewestAllocationLastModifiedSeconds)
 	assert.Equal(t, 1, vg.StatusCounts["running"])
 
@@ -277,6 +294,8 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	assert.Equal(t, "10.0.0.5", alloc.NodeIP)
 	assert.Equal(t, int64(1234), alloc.LastModifiedSeconds)
 	assert.EqualValues(t, 3, alloc.Version)
+	assert.Equal(t, "myrepo/web:1.2.3", alloc.DockerImage)
+	assert.Equal(t, time.Unix(0, 1_754_006_400_000000000).Format(time.RFC3339), alloc.TaggedTime)
 
 	require.Len(t, alloc.Ports, 1)
 	assert.Equal(t, "10.0.0.5:8080", alloc.Ports[0].Address)

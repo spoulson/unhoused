@@ -87,6 +87,8 @@ Response `200`:
   "versionGroups": [
     {
       "version": 3,
+      "dockerImage": "myrepo/web:1.2.3",
+      "taggedTime": "2026-08-01T00:00:00Z",
       "newestAllocationLastModifiedSeconds": 1234,
       "statusCounts": { "running": 5, "pending": 1, "failed": 0, "complete": 0, "lost": 0 }
     }
@@ -102,6 +104,8 @@ Response `200`:
       "desiredStatus": "run",
       "taskGroup": "web",
       "version": 3,
+      "dockerImage": "myrepo/web:1.2.3",
+      "taggedTime": "2026-08-01T00:00:00Z",
       "lastModifiedSeconds": 1234,
       "ports": [
         {
@@ -133,6 +137,13 @@ Response `200`:
   filters are currently active. `status`/`desired` aren't included since those are Nomad's fixed enums.
 - `allocations` holds only the current page (`pageSize` items or fewer on the last page) of the filtered,
   sorted allocation list, in the same order as before pagination was introduced.
+- `dockerImage` (per version group and per allocation) is the Docker image (with tag) configured on that job
+  version's first docker-driver task, walking task groups then tasks in order — a job version can have
+  multiple docker tasks with different images, but only the first one found is reported. `""` if the version
+  has no docker-driver task.
+- `taggedTime` (per version group and per allocation) is the RFC3339 timestamp the job version was tagged at,
+  via Nomad's version-tag feature (`nomad job tag apply`) — not to be confused with `submitTime`/
+  `lastModifiedSeconds`, which track when the version was created. `""` if the version has no tag.
 - `lastModifiedSeconds` (per allocation) and `newestAllocationLastModifiedSeconds` (per version group) are
   both `now - submitTime`, where `submitTime` is the Nomad job version's `SubmitTime` (Nomad's per-version
   `GET /v1/job/{id}/versions` data) matching that allocation's `version` — not each allocation's own

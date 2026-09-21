@@ -1,0 +1,20 @@
+.versionLabel {
+  word-break: break-all;
+}
+
+.version {
+  font-weight: 700;
+  color: var(--gb-fg0);
+}
+
+.key {
+  color: var(--gb-gray);
+}
+
+.taggedTime {
+  color: var(--gb-blue);
+}
+
+.image {
+  color: var(--gb-purple);
+}

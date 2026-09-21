@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	nomadapi "github.com/hashicorp/nomad/api"
 	"github.com/stretchr/testify/assert"
@@ -72,6 +73,103 @@ func TestGetAllocationPortsCachesRepeatedCalls(t *testing.T) {
 
 	got := atomic.LoadInt32(requestCount)
 	assert.Equal(t, int32(1), got, "second call should be served from cache")
+}
+
+func TestDockerImageFromJob(t *testing.T) {
+	tests := []struct {
+		name string
+		job  *nomadapi.Job
+		want string
+	}{
+		{"nil job", nil, ""},
+		{"no task groups", &nomadapi.Job{}, ""},
+		{
+			"docker task",
+			&nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.2.3"}}}},
+			}},
+			"myrepo/web:1.2.3",
+		},
+		{
+			"non-docker driver only",
+			&nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "exec", Config: map[string]any{"command": "/bin/true"}}}},
+			}},
+			"",
+		},
+		{
+			"first match across multiple task groups",
+			&nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "exec"}}},
+				{Tasks: []*nomadapi.Task{
+					{Driver: "docker", Config: map[string]any{"image": "myrepo/first:1"}},
+					{Driver: "docker", Config: map[string]any{"image": "myrepo/second:1"}},
+				}},
+			}},
+			"myrepo/first:1",
+		},
+		{
+			"nil task group and task tolerated",
+			&nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+				nil,
+				{Tasks: []*nomadapi.Task{nil, {Driver: "docker", Config: map[string]any{"image": "myrepo/web:1"}}}},
+			}},
+			"myrepo/web:1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DockerImageFromJob(tt.job)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestVersionTaggedTime(t *testing.T) {
+	tests := []struct {
+		name     string
+		job      *nomadapi.Job
+		wantTime time.Time
+		wantOK   bool
+	}{
+		{"nil job", nil, time.Time{}, false},
+		{"no version tag", &nomadapi.Job{}, time.Time{}, false},
+		{
+			"tagged",
+			&nomadapi.Job{VersionTag: &nomadapi.JobVersionTag{Name: "release", TaggedTime: 3_000_000_000}},
+			time.Unix(0, 3_000_000_000),
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotTime, gotOK := VersionTaggedTime(tt.job)
+			assert.Equal(t, tt.wantOK, gotOK)
+			assert.True(t, tt.wantTime.Equal(gotTime), "VersionTaggedTime() = %v, want %v", gotTime, tt.wantTime)
+		})
+	}
+}
+
+func TestJobVersionDockerImageCachesRepeatedCalls(t *testing.T) {
+	client, err := New("http://127.0.0.1:0", "")
+	require.NoError(t, err)
+
+	job := &nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+		{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.2.3"}}}},
+	}}
+
+	got := client.JobVersionDockerImage("web", 3, job)
+	assert.Equal(t, "myrepo/web:1.2.3", got)
+
+	// Second call passes a different job spec for the same jobID/version; the
+	// cached value should win, since it's ignored on a cache hit.
+	staleJob := &nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
+		{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "should-not-be-seen:1"}}}},
+	}}
+	got = client.JobVersionDockerImage("web", 3, staleJob)
+	assert.Equal(t, "myrepo/web:1.2.3", got, "second call should be served from cache")
 }
 
 func TestGetAllocationPortsNoAllocatedResources(t *testing.T) {

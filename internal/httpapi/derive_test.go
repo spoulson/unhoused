@@ -70,11 +70,53 @@ func TestVersionSubmitTimes(t *testing.T) {
 	assert.True(t, got[2].Equal(time.Unix(0, 2_000_000_000)), "versionSubmitTimes()[2] = %v", got[2])
 }
 
+func TestVersionDockerImages(t *testing.T) {
+	versions := []*nomadapi.Job{
+		{
+			Version: ptr(uint64(3)),
+			TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.2.3"}}}},
+			},
+		},
+		{Version: ptr(uint64(2))}, // no docker task -> ""
+		nil,
+		{Version: nil},
+	}
+
+	got := versionDockerImages(&fakeNomad{}, "web", versions)
+
+	require.Len(t, got, 2)
+	assert.Equal(t, "myrepo/web:1.2.3", got[3])
+	assert.Empty(t, got[2])
+}
+
+func TestVersionTaggedTimes(t *testing.T) {
+	versions := []*nomadapi.Job{
+		{Version: ptr(uint64(3)), VersionTag: &nomadapi.JobVersionTag{Name: "release", TaggedTime: 3_000_000_000}},
+		{Version: ptr(uint64(2))}, // no tag -> absent
+		nil,
+		{Version: nil},
+	}
+
+	got := versionTaggedTimes(versions)
+
+	require.Len(t, got, 1)
+	assert.Equal(t, time.Unix(0, 3_000_000_000).Format(time.RFC3339), got[3])
+	_, ok := got[2]
+	assert.False(t, ok, "untagged version should be absent, not empty")
+}
+
 func TestGroupByVersion(t *testing.T) {
 	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
 	submitTimes := map[uint64]time.Time{
 		3: now.Add(-1234 * time.Second),
 		2: now.Add(-5000 * time.Second),
+	}
+	images := map[uint64]string{
+		3: "myrepo/web:1.2.3",
+	}
+	taggedTimes := map[uint64]string{
+		3: "2026-08-01T00:00:00Z",
 	}
 
 	allocs := []*nomadapi.AllocationListStub{
@@ -85,7 +127,7 @@ func TestGroupByVersion(t *testing.T) {
 		{JobVersion: 2, ClientStatus: "unknown-status"},
 	}
 
-	got := groupByVersion(allocs, submitTimes, now)
+	got := groupByVersion(allocs, submitTimes, images, taggedTimes, now)
 
 	require.Len(t, got, 2)
 
@@ -94,12 +136,16 @@ func TestGroupByVersion(t *testing.T) {
 	require.Equal(t, uint64(2), got[1].Version)
 
 	v3 := got[0]
+	assert.Equal(t, "myrepo/web:1.2.3", v3.DockerImage)
+	assert.Equal(t, "2026-08-01T00:00:00Z", v3.TaggedTime)
 	assert.Equal(t, int64(1234), v3.NewestAllocationLastModifiedSeconds)
 	assert.Equal(t, 2, v3.StatusCounts["running"])
 	assert.Equal(t, 1, v3.StatusCounts["pending"])
 	assert.Equal(t, 0, v3.StatusCounts["failed"], "present as zero key")
 
 	v2 := got[1]
+	assert.Empty(t, v2.DockerImage, "no image recorded for this version")
+	assert.Empty(t, v2.TaggedTime, "no tag recorded for this version")
 	assert.Equal(t, 1, v2.StatusCounts["lost"])
 	// Unknown client statuses are dropped rather than growing the map.
 	assert.Len(t, v2.StatusCounts, len(clientStatuses))

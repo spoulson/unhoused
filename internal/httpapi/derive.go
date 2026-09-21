@@ -10,6 +10,7 @@ import (
 	nomadapi "github.com/hashicorp/nomad/api"
 
 	"unhoused/internal/config"
+	"unhoused/internal/nomadclient"
 )
 
 // clientStatuses are the Nomad allocation ClientStatus values tracked in
@@ -57,6 +58,40 @@ func versionSubmitTimes(versions []*nomadapi.Job) map[uint64]time.Time {
 	return times
 }
 
+// versionDockerImages builds a version -> Docker image (with tag) lookup
+// from the job's version history, via client's per-version cache (see
+// nomadclient.Client.JobVersionDockerImage).
+func versionDockerImages(client nomadclient.API, jobID string, versions []*nomadapi.Job) map[uint64]string {
+	images := make(map[uint64]string, len(versions))
+	for _, v := range versions {
+		if v == nil || v.Version == nil {
+			continue
+		}
+		images[*v.Version] = client.JobVersionDockerImage(jobID, *v.Version, v)
+	}
+	return images
+}
+
+// versionTaggedTimes builds a version -> RFC3339 Nomad version-tag time
+// lookup from the job's version history ("" for versions with no tag). Read
+// fresh from versions on every call rather than cached, since a version's
+// tag can change after the version itself is created (see
+// nomadclient.VersionTaggedTime).
+func versionTaggedTimes(versions []*nomadapi.Job) map[uint64]string {
+	taggedTimes := make(map[uint64]string, len(versions))
+	for _, v := range versions {
+		if v == nil || v.Version == nil {
+			continue
+		}
+		taggedTime, ok := nomadclient.VersionTaggedTime(v)
+		if !ok {
+			continue
+		}
+		taggedTimes[*v.Version] = taggedTime.Format(time.RFC3339)
+	}
+	return taggedTimes
+}
+
 func lastModifiedSeconds(submitTime, now time.Time) int64 {
 	d := now.Sub(submitTime)
 	if d < 0 {
@@ -67,7 +102,7 @@ func lastModifiedSeconds(submitTime, now time.Time) int64 {
 
 // groupByVersion groups allocation stubs by job version, sorted newest
 // version first.
-func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint64]time.Time, now time.Time) []versionGroupDTO {
+func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint64]time.Time, images map[uint64]string, taggedTimes map[uint64]string, now time.Time) []versionGroupDTO {
 	groups := make(map[uint64]*versionGroupDTO)
 
 	for _, a := range allocs {
@@ -75,6 +110,8 @@ func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint6
 		if !ok {
 			group = &versionGroupDTO{
 				Version:                             a.JobVersion,
+				DockerImage:                         images[a.JobVersion],
+				TaggedTime:                          taggedTimes[a.JobVersion],
 				NewestAllocationLastModifiedSeconds: lastModifiedSeconds(submitTimes[a.JobVersion], now),
 				StatusCounts:                        newStatusCounts(),
 			}
