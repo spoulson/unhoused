@@ -59,15 +59,14 @@ func versionSubmitTimes(versions []*nomadapi.Job) map[uint64]time.Time {
 }
 
 // versionDockerImages builds a version -> Docker image (with tag) lookup
-// from the job's version history, via client's per-version cache (see
-// nomadclient.Client.JobVersionDockerImage).
-func versionDockerImages(client nomadclient.API, jobID string, versions []*nomadapi.Job) map[uint64]string {
+// from the job's version history.
+func versionDockerImages(versions []*nomadapi.Job) map[uint64]string {
 	images := make(map[uint64]string, len(versions))
 	for _, v := range versions {
 		if v == nil || v.Version == nil {
 			continue
 		}
-		images[*v.Version] = client.JobVersionDockerImage(jobID, *v.Version, v)
+		images[*v.Version] = nomadclient.DockerImageFromJob(v)
 	}
 	return images
 }

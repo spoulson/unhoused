@@ -91,10 +91,6 @@ func (f *fakeNomad) GetAllocationPorts(_ context.Context, allocID string) (nomad
 	return result, nil
 }
 
-func (f *fakeNomad) JobVersionDockerImage(_ string, _ uint64, job *nomadapi.Job) string {
-	return nomadclient.DockerImageFromJob(job)
-}
-
 func (f *fakeNomad) ListNodes(context.Context) ([]*nomadapi.NodeListStub, error) {
 	return f.nodes, f.nodesErr
 }

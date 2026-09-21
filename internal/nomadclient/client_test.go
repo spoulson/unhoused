@@ -152,26 +152,6 @@ func TestVersionTaggedTime(t *testing.T) {
 	}
 }
 
-func TestJobVersionDockerImageCachesRepeatedCalls(t *testing.T) {
-	client, err := New("http://127.0.0.1:0", "")
-	require.NoError(t, err)
-
-	job := &nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
-		{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.2.3"}}}},
-	}}
-
-	got := client.JobVersionDockerImage("web", 3, job)
-	assert.Equal(t, "myrepo/web:1.2.3", got)
-
-	// Second call passes a different job spec for the same jobID/version; the
-	// cached value should win, since it's ignored on a cache hit.
-	staleJob := &nomadapi.Job{TaskGroups: []*nomadapi.TaskGroup{
-		{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "should-not-be-seen:1"}}}},
-	}}
-	got = client.JobVersionDockerImage("web", 3, staleJob)
-	assert.Equal(t, "myrepo/web:1.2.3", got, "second call should be served from cache")
-}
-
 func TestGetAllocationPortsNoAllocatedResources(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		alloc := nomadapi.Allocation{ID: "alloc-1"}
