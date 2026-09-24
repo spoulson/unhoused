@@ -8,6 +8,7 @@ import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
 import { VersionLabel } from '../components/VersionLabel'
 import { formatDuration } from '../lib/duration'
+import { statusColor } from '../lib/statusColors'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { formatVersionLabel } from '../lib/version'
 import styles from './JobStatusPage.module.css'
@@ -440,6 +441,13 @@ export function JobStatusPage() {
     (effectiveVersionPage - 1) * versionPageSize,
     effectiveVersionPage * versionPageSize,
   )
+  const totalAllocationsByStatus = CLIENT_STATUSES.reduce(
+    (totals, status) => {
+      totals[status] = data.versionGroups.reduce((sum, group) => sum + group.statusCounts[status], 0)
+      return totals
+    },
+    {} as Record<ClientStatus, number>,
+  )
 
   return (
     <div>
@@ -463,31 +471,64 @@ export function JobStatusPage() {
         </p>
       )}
       <div className={styles.versionGroups}>
-        {paginatedVersionGroups.map((group) => (
-          <div key={group.version} className={styles.versionGroup}>
-            <div className={styles.versionHeader}>
-              <span>
-                Version <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
-              </span>
-              <span className={styles.lastModified}>
-                last modified {formatDuration(group.newestAllocationLastModifiedSeconds)}
-              </span>
+        {paginatedVersionGroups.map((group) => {
+          const presentStatuses = CLIENT_STATUSES.filter((status) => group.statusCounts[status] > 0)
+          const progressPercentByStatus = Object.fromEntries(
+            presentStatuses.map((status) => [
+              status,
+              totalAllocationsByStatus[status] > 0
+                ? (group.statusCounts[status] / totalAllocationsByStatus[status]) * 100
+                : 0,
+            ]),
+          ) as Record<ClientStatus, number>
+          const statusesByDescendingPercent = [...presentStatuses].sort(
+            (a, b) => progressPercentByStatus[b] - progressPercentByStatus[a],
+          )
+          const progressTooltip = [
+            `Version ${group.version}:`,
+            ...statusesByDescendingPercent.map(
+              (status) => `${Math.round(progressPercentByStatus[status])}% of ${status} allocs`,
+            ),
+          ].join('\n')
+          return (
+            <div key={group.version} className={styles.versionGroup}>
+              <div className={styles.versionProgressStack} title={progressTooltip}>
+                {statusesByDescendingPercent.map((status) => (
+                  <div key={status} className={styles.versionProgressBar}>
+                    <div
+                      className={styles.versionProgressFill}
+                      style={{
+                        width: `${progressPercentByStatus[status]}%`,
+                        background: `var(--gb-${statusColor(status)})`,
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className={styles.versionHeader}>
+                <span>
+                  Version <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
+                </span>
+                <span className={styles.lastModified}>
+                  last modified {formatDuration(group.newestAllocationLastModifiedSeconds)}
+                </span>
+              </div>
+              <div className={styles.statusCounts}>
+                {presentStatuses.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    className={styles.statusCount}
+                    onClick={() => handleVersionStatusClick(group.version, status)}
+                    title={`Filter allocations to version ${group.version}, ${status}`}
+                  >
+                    <StatusBadge status={status} /> <span className="mono">{group.statusCounts[status]}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className={styles.statusCounts}>
-              {CLIENT_STATUSES.filter((status) => group.statusCounts[status] > 0).map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  className={styles.statusCount}
-                  onClick={() => handleVersionStatusClick(group.version, status)}
-                  title={`Filter allocations to version ${group.version}, ${status}`}
-                >
-                  <StatusBadge status={status} /> <span className="mono">{group.statusCounts[status]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
       {data.versionGroups.length > 0 && (
         <Pagination

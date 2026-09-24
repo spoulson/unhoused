@@ -29,6 +29,22 @@
   border: 1px solid var(--gb-bg3);
   border-radius: 6px;
   padding: 0.75rem 1rem;
+  overflow: hidden;
+}
+
+/* Bleeds out to the box's edges (undoing its padding) so each status bar spans the box's full
+   width and sits flush with its rounded corners; .versionGroup's overflow: hidden clips the
+   bars back to that radius. */
+.versionProgressStack {
+  margin: -0.75rem -1rem 0.5rem;
+}
+
+.versionProgressBar {
+  height: 5px;
+}
+
+.versionProgressFill {
+  height: 100%;
 }
 
 .versionHeader {
