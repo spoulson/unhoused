@@ -46,7 +46,7 @@ export function useJobs(profileName: string) {
   })
 }
 
-export function useJobStatus(profileName: string, jobId: string, params: JobStatusParams) {
+export function useJobStatus(profileName: string, jobId: string, params: JobStatusParams, paused = false) {
   const { data: profiles } = useProfiles()
   const refreshIntervalSeconds = profiles?.refreshIntervalSeconds ?? DEFAULT_REFRESH_INTERVAL_SECONDS
 
@@ -56,7 +56,7 @@ export function useJobStatus(profileName: string, jobId: string, params: JobStat
       fetchJSON<JobStatusResponse>(
         `/api/profiles/${encodeURIComponent(profileName)}/jobs/${encodeURIComponent(jobId)}?${jobStatusQueryString(params)}`,
       ),
-    refetchInterval: refreshIntervalSeconds * 1000,
+    refetchInterval: paused ? false : refreshIntervalSeconds * 1000,
     // Changing a filter/page/pageSize changes the query key. Without this, TanStack Query would
     // clear `data` and show the loading state on every such change (not just the initial mount),
     // unmounting the filter bar/table mid-interaction. Keeping the previous page's data visible
