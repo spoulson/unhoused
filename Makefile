@@ -15,3 +15,7 @@ dev:
 docker:
 	docker build -t unhoused-backend:latest .
 	docker build -t unhoused-frontend:latest ./frontend
+
+.PHONY: demo
+demo:
+	docker compose -f docker-compose.demo.yaml up --build

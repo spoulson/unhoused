@@ -1,0 +1,115 @@
+package nomaddemo
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func testDeploySpec(epoch time.Time) deployJobSpec {
+	return deployJobSpec{
+		id:          "test-job",
+		name:        "test-job",
+		dockerRepo:  "example/test-job",
+		epoch:       epoch,
+		baseVersion: 5,
+		taskGroups: []deployTaskGroup{
+			{name: "web", replicas: 2, portLabels: []string{"http"}},
+		},
+	}
+}
+
+func TestDeployCycleState(t *testing.T) {
+	epoch := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	spec := testDeploySpec(epoch)
+
+	cases := []struct {
+		name               string
+		at                 time.Time
+		wantOld, wantNew   uint64
+		wantRolloutElapsed time.Duration
+	}{
+		{"at epoch, first rollout just starting", epoch, 5, 6, 0},
+		{"mid first rollout", epoch.Add(2 * time.Minute), 5, 6, 2 * time.Minute},
+		{"just before the cycle repeats", epoch.Add(deployCycleLength - time.Second), 5, 6, deployCycleLength - time.Second},
+		{"exactly at the next cycle boundary", epoch.Add(deployCycleLength), 6, 7, 0},
+		{"mid second rollout", epoch.Add(deployCycleLength + time.Minute), 6, 7, time.Minute},
+		{"before epoch (clamped)", epoch.Add(-time.Hour), 5, 6, 0},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			oldVersion, newVersion, rolloutElapsed := deployCycleState(spec, c.at)
+			assert.Equal(t, c.wantOld, oldVersion)
+			assert.Equal(t, c.wantNew, newVersion)
+			assert.Equal(t, c.wantRolloutElapsed, rolloutElapsed)
+		})
+	}
+}
+
+func TestDeployAllocations(t *testing.T) {
+	epoch := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	spec := testDeploySpec(epoch)
+	// One task group, 2 replicas, rolloutDuration=5m => slotDuration=2m30s,
+	// pendingPhase=20% of that = 30s.
+
+	byVersion := func(allocs []simAllocation, version uint64) []simAllocation {
+		var matched []simAllocation
+		for _, a := range allocs {
+			if a.jobVersion == version {
+				matched = append(matched, a)
+			}
+		}
+		return matched
+	}
+
+	t.Run("rollout just started: slot 0 mid-replacement, slot 1 untouched", func(t *testing.T) {
+		allocs := deployAllocations(spec, epoch)
+		assert.Len(t, allocs, 3) // slot 0: old+new, slot 1: old only
+
+		oldAllocs := byVersion(allocs, 5)
+		newAllocs := byVersion(allocs, 6)
+		assert.Len(t, oldAllocs, 2)
+		assert.Len(t, newAllocs, 1)
+
+		for _, a := range oldAllocs {
+			assert.Equal(t, "running", a.clientStatus)
+		}
+		assert.Equal(t, "pending", newAllocs[0].clientStatus)
+		assert.Equal(t, "run", newAllocs[0].desiredStatus)
+	})
+
+	t.Run("slot 0 finished replacing, slot 1 not started", func(t *testing.T) {
+		allocs := deployAllocations(spec, epoch.Add(45*time.Second))
+		assert.Len(t, allocs, 3)
+
+		oldAllocs := byVersion(allocs, 5)
+		newAllocs := byVersion(allocs, 6)
+		assert.Len(t, oldAllocs, 2)
+		assert.Len(t, newAllocs, 1)
+	})
+
+	t.Run("both slots fully replaced by the end of the rollout", func(t *testing.T) {
+		allocs := deployAllocations(spec, epoch.Add(deployRolloutDuration))
+		newAllocs := byVersion(allocs, 6)
+		oldAllocs := byVersion(allocs, 5)
+
+		assert.Len(t, newAllocs, 2)
+		for _, a := range newAllocs {
+			assert.Equal(t, "running", a.clientStatus)
+			assert.Equal(t, "run", a.desiredStatus)
+		}
+		for _, a := range oldAllocs {
+			assert.Equal(t, "complete", a.clientStatus)
+			assert.Equal(t, "stop", a.desiredStatus)
+		}
+	})
+
+	t.Run("allocation IDs are stable across repeated calls at the same time", func(t *testing.T) {
+		at := epoch.Add(90 * time.Second)
+		first := deployAllocations(spec, at)
+		second := deployAllocations(spec, at)
+		assert.Equal(t, first, second)
+	})
+}

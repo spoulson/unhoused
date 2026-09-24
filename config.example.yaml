@@ -12,3 +12,9 @@ profiles:
     nomadUrl: http://127.0.0.1:4646
     nomadToken: "xxx"
     nodeHostnameTemplate: "{node}.foobar.dev"
+
+  # Uncomment to point at `go run ./cmd/nomaddemo` (see internal/nomaddemo), which simulates a Nomad API with
+  # example jobs instead of talking to a real cluster.
+  # - name: demo
+  #   nomadUrl: http://127.0.0.1:4646
+  #   nodeHostnameTemplate: "{node}.demo.local"

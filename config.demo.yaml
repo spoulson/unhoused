@@ -1,0 +1,11 @@
+# Config for docker-compose.demo.yaml: points unhoused at the nomaddemo service (internal/nomaddemo)
+# instead of a real Nomad cluster. No token is needed — nomaddemo doesn't check one. Tracked in git (unlike
+# config.yaml) since it holds no real credentials.
+httpPublicUrl: http://localhost
+listenPort: 3001
+refreshIntervalSeconds: 5
+
+profiles:
+  - name: demo
+    nomadUrl: http://nomaddemo:4646
+    nodeHostnameTemplate: "{node}.demo.local"
