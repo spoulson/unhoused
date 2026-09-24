@@ -3,14 +3,28 @@ import { Link, Outlet, useNavigate, useParams } from 'react-router-dom'
 import { fetchJSON } from './api/client'
 import { useProfiles } from './api/queries'
 import type { JobsResponse } from './api/types'
+import { AutoRefreshToggle } from './components/AutoRefreshToggle'
 import { ThemeToggle } from './components/ThemeToggle'
 import styles from './Layout.module.css'
+
+export interface JobStatusOutletContext {
+  autoRefreshPaused: boolean
+}
 
 export function Layout() {
   const { profileName, jobId } = useParams()
   const { data: profilesData } = useProfiles()
   const navigate = useNavigate()
   const [isSwitchingProfile, setIsSwitchingProfile] = useState(false)
+  const [autoRefreshPaused, setAutoRefreshPaused] = useState(false)
+
+  // Each job visit starts with automatic updates running, regardless of whether a previous job was paused.
+  // Adjusted during render (rather than in an effect) per React's "resetting state on prop change" pattern.
+  const [pausedForJobId, setPausedForJobId] = useState(jobId)
+  if (jobId !== pausedForJobId) {
+    setPausedForJobId(jobId)
+    setAutoRefreshPaused(false)
+  }
 
   async function handleProfileChange(newProfileName: string) {
     if (!profileName || newProfileName === profileName) {
@@ -97,14 +111,15 @@ export function Layout() {
             </>
           )}
         </nav>
-        <div className={styles.themeToggle}>
+        <div className={styles.headerActions}>
+          {jobId && <AutoRefreshToggle paused={autoRefreshPaused} onToggle={() => setAutoRefreshPaused((p) => !p)} />}
           <ThemeToggle />
         </div>
       </header>
       <main className={styles.main}>
         {/* Keyed by profile/job so switching either fully remounts the page instead of a stale
             previous profile's data lingering via useJobStatus's keepPreviousData. */}
-        <Outlet key={`${profileName ?? ''}/${jobId ?? ''}`} />
+        <Outlet key={`${profileName ?? ''}/${jobId ?? ''}`} context={{ autoRefreshPaused } satisfies JobStatusOutletContext} />
       </main>
     </div>
   )

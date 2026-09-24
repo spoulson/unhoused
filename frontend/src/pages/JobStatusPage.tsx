@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
+import type { JobStatusOutletContext } from '../Layout'
 import { useJobStatus } from '../api/queries'
 import type { ClientStatus, Port } from '../api/types'
 import { CopyButton } from '../components/CopyButton'
@@ -283,6 +284,7 @@ function PortAddresses({ ports }: { ports: Port[] }) {
 
 export function JobStatusPage() {
   const { profileName, jobId } = useParams<{ profileName: string; jobId: string }>()
+  const { autoRefreshPaused } = useOutletContext<JobStatusOutletContext>()
   const pageTitle = `Job: ${jobId ?? ''}`
   useDocumentTitle(pageTitle)
   const [, setSearchParams] = useSearchParams()
@@ -301,17 +303,22 @@ export function JobStatusPage() {
     parseVersionPageSize(new URLSearchParams(window.location.search)),
   )
 
-  const { data, isLoading, error } = useJobStatus(profileName ?? '', jobId ?? '', {
-    q: search,
-    taskGroup: filters.taskGroup,
-    version: filters.version,
-    node: filters.node,
-    status: filters.status,
-    sort: sort.direction !== 'none' ? sort.column : undefined,
-    dir: sort.direction !== 'none' ? sort.direction : undefined,
-    page,
-    pageSize,
-  })
+  const { data, isLoading, error } = useJobStatus(
+    profileName ?? '',
+    jobId ?? '',
+    {
+      q: search,
+      taskGroup: filters.taskGroup,
+      version: filters.version,
+      node: filters.node,
+      status: filters.status,
+      sort: sort.direction !== 'none' ? sort.column : undefined,
+      dir: sort.direction !== 'none' ? sort.direction : undefined,
+      page,
+      pageSize,
+    },
+    autoRefreshPaused,
+  )
 
   // Maps version -> {taggedTime, dockerImage} for the Version filter dropdown's labels, since
   // filterOptions.versions is just numbers; versionGroups (unaffected by pagination/filters) always covers
