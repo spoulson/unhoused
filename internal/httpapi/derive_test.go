@@ -83,11 +83,41 @@ func TestVersionDockerImages(t *testing.T) {
 		{Version: nil},
 	}
 
-	got := versionDockerImages(&fakeNomad{}, "web", versions)
+	got := versionDockerImages(versions)
 
 	require.Len(t, got, 2)
 	assert.Equal(t, "myrepo/web:1.2.3", got[3])
 	assert.Empty(t, got[2])
+}
+
+// TestVersionDockerImagesReflectsEachCallsJobSpec guards against
+// re-introducing a per-(jobID, version) cache: Nomad reuses job IDs and
+// restarts version numbering at 0 after a `job stop -purge` + redeploy, so
+// the same version number can legitimately mean two different job specs
+// across separate calls, and each call must derive its image fresh.
+func TestVersionDockerImagesReflectsEachCallsJobSpec(t *testing.T) {
+	firstVersions := []*nomadapi.Job{
+		{
+			Version: ptr(uint64(0)),
+			TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:1.0.0"}}}},
+			},
+		},
+	}
+	secondVersions := []*nomadapi.Job{
+		{
+			Version: ptr(uint64(0)),
+			TaskGroups: []*nomadapi.TaskGroup{
+				{Tasks: []*nomadapi.Task{{Driver: "docker", Config: map[string]any{"image": "myrepo/web:2.0.0"}}}},
+			},
+		},
+	}
+
+	first := versionDockerImages(firstVersions)
+	second := versionDockerImages(secondVersions)
+
+	assert.Equal(t, "myrepo/web:1.0.0", first[0])
+	assert.Equal(t, "myrepo/web:2.0.0", second[0])
 }
 
 func TestVersionTaggedTimes(t *testing.T) {

@@ -115,7 +115,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	now := s.now()
 	submitTimes := versionSubmitTimes(versions)
-	images := versionDockerImages(client, jobID, versions)
+	images := versionDockerImages(versions)
 	taggedTimes := versionTaggedTimes(versions)
 	// versionGroups and filterOptions reflect ALL of the job's allocations,
 	// unaffected by the table filters/pagination below — they represent
