@@ -1,0 +1,44 @@
+# Standalone demo stack: unhoused (backend + frontend + Caddy) pointed at nomaddemo (internal/nomaddemo)
+# instead of a real Nomad cluster, so the whole thing runs with one command and no external dependencies.
+#
+# Usage: docker compose -f docker-compose.demo.yaml up --build
+#
+# A separate `name:` keeps this stack's containers distinct from docker-compose.yaml's, so both can run at
+# once without colliding. Caddy is published on a different host port (9100) than the production compose
+# file's 9000 for the same reason.
+name: unhoused-demo
+
+services:
+  nomaddemo:
+    build:
+      context: .
+      dockerfile: cmd/nomaddemo/Dockerfile
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+    image: unhoused-backend:latest
+    restart: unless-stopped
+    volumes:
+      - ./config.demo.yaml:/etc/unhoused/config.yaml:ro
+    depends_on:
+      - nomaddemo
+
+  frontend:
+    build:
+      context: ./frontend
+    image: unhoused-frontend:latest
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9100:8080"
+      - "[::]:9100:8080"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+      - frontend

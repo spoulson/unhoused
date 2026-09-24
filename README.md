@@ -8,6 +8,8 @@ The backend (Go) polls the Nomad HTTP API and serves a REST API; the frontend (R
 one or more Nomad environments (profiles) and browse jobs, versions, and allocations without needing Nomad's own UI or
 CLI.
 
+![Job Status Page, showing a job's version history and allocations](docs/images/job-status-page.png)
+
 ## Quick start
 
 First, create a backend configuration by copying `config.example.yaml` to `config.yaml`, then edit to setup your Nomad

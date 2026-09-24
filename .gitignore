@@ -1,9 +1,10 @@
 /bin/
 
 # Local configs contain plaintext Nomad tokens (specs/configuration.md) — never commit them.
-# config.example.yaml is the only config meant to be tracked.
+# config.example.yaml and config.demo.yaml hold no real credentials and are meant to be tracked.
 /config.yaml
 /config.*.yaml
 !/config.example.yaml
+!/config.demo.yaml
 
 /.claude/
