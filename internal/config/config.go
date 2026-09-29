@@ -13,9 +13,18 @@ import (
 // Profile describes a single Nomad environment unhoused can monitor.
 type Profile struct {
 	Name                 string `yaml:"name"`
+	Slug                 string `yaml:"slug"`
 	NomadURL             string `yaml:"nomadUrl"`
 	NomadToken           string `yaml:"nomadToken"`
 	NodeHostnameTemplate string `yaml:"nodeHostnameTemplate"`
+}
+
+// EffectiveSlug is the profile's URI path segment (e.g. /profiles/{EffectiveSlug}): Slug when set, else Name.
+func (p Profile) EffectiveSlug() string {
+	if p.Slug != "" {
+		return p.Slug
+	}
+	return p.Name
 }
 
 // Config is the top-level unhoused configuration file.
@@ -71,6 +80,9 @@ func (c *Config) applyDefaults() {
 		if c.Profiles[i].NodeHostnameTemplate == "" {
 			c.Profiles[i].NodeHostnameTemplate = defaultNodeHostnameTemplate
 		}
+		if c.Profiles[i].Slug == "" {
+			c.Profiles[i].Slug = c.Profiles[i].Name
+		}
 	}
 }
 
@@ -80,6 +92,7 @@ func (c *Config) validate() error {
 	}
 
 	seenNames := make(map[string]bool, len(c.Profiles))
+	seenSlugs := make(map[string]bool, len(c.Profiles))
 	for i, p := range c.Profiles {
 		if p.Name == "" {
 			return fmt.Errorf("profile %d: name is required", i)
@@ -88,6 +101,11 @@ func (c *Config) validate() error {
 			return fmt.Errorf("profile %d: duplicate profile name %q", i, p.Name)
 		}
 		seenNames[p.Name] = true
+
+		if seenSlugs[p.EffectiveSlug()] {
+			return fmt.Errorf("profile %q: duplicate profile slug %q", p.Name, p.EffectiveSlug())
+		}
+		seenSlugs[p.EffectiveSlug()] = true
 
 		if p.NomadURL == "" {
 			return fmt.Errorf("profile %q: nomadUrl is required", p.Name)

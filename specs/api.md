@@ -34,12 +34,14 @@ Response `200`:
 {
   "refreshIntervalSeconds": 5,
   "profiles": [
-    { "name": "prod-usw1" }
+    { "name": "prod-usw1", "slug": "prod-usw1" }
   ]
 }
 ```
 
-`name` is the profile identifier used in later routes — Nomad URL and token are intentionally omitted.
+`name` is the profile's display name; `slug` (defaults to `name` when unset in configuration — see
+[configuration.md](configuration.md)) is the identifier used in later routes' `{profile}` path segment. Nomad
+URL and token are intentionally omitted.
 
 ### `GET /api/profiles/{profile}/jobs`
 

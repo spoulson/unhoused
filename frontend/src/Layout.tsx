@@ -12,8 +12,9 @@ export interface JobStatusOutletContext {
 }
 
 export function Layout() {
-  const { profileName, jobId } = useParams()
+  const { profileSlug, jobId } = useParams()
   const { data: profilesData } = useProfiles()
+  const profileName = profilesData?.profiles.find((p) => p.slug === profileSlug)?.name ?? profileSlug
   const navigate = useNavigate()
   const [isSwitchingProfile, setIsSwitchingProfile] = useState(false)
   const [autoRefreshPaused, setAutoRefreshPaused] = useState(false)
@@ -26,8 +27,8 @@ export function Layout() {
     setAutoRefreshPaused(false)
   }
 
-  async function handleProfileChange(newProfileName: string) {
-    if (!profileName || newProfileName === profileName) {
+  async function handleProfileChange(newProfileSlug: string) {
+    if (!profileSlug || newProfileSlug === profileSlug) {
       return
     }
 
@@ -35,9 +36,9 @@ export function Layout() {
     try {
       if (jobId) {
         try {
-          const jobs = await fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(newProfileName)}/jobs`)
+          const jobs = await fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(newProfileSlug)}/jobs`)
           if (jobs.jobs.some((job) => job.id === jobId)) {
-            navigate(`/profiles/${newProfileName}/jobs/${jobId}`)
+            navigate(`/profiles/${newProfileSlug}/jobs/${jobId}`)
             return
           }
         } catch {
@@ -45,7 +46,7 @@ export function Layout() {
         }
       }
 
-      navigate(`/profiles/${newProfileName}`)
+      navigate(`/profiles/${newProfileSlug}`)
     } finally {
       setIsSwitchingProfile(false)
     }
@@ -53,7 +54,7 @@ export function Layout() {
 
   // Keeps the currently selected profile as an option even before the profiles list has loaded
   // (or if it's somehow missing from it), so the <select> always has a valid selected value.
-  const knownCurrentProfile = profilesData?.profiles.some((p) => p.name === profileName)
+  const knownCurrentProfile = profilesData?.profiles.some((p) => p.slug === profileSlug)
 
   return (
     <div className={styles.layout}>
@@ -64,14 +65,14 @@ export function Layout() {
         </Link>
         <nav className={styles.breadcrumb}>
           <Link to="/">Home</Link>
-          {profileName && (
+          {profileSlug && (
             <>
               {' / '}
               <span className={styles.icon} aria-hidden="true">
                 ▣
               </span>
               <span className={styles.profileGroup}>
-                <Link to={`/profiles/${profileName}`}>{profileName}</Link>
+                <Link to={`/profiles/${profileSlug}`}>{profileName}</Link>
                 {/* An inline SVG, not a Unicode glyph, since triangle/chevron characters render
                     inconsistently (sometimes near-invisible) across the app's configured fonts. */}
                 <svg className={styles.dropdownArrow} aria-hidden="true" viewBox="0 0 10 6" width="10" height="6">
@@ -86,14 +87,14 @@ export function Layout() {
                 </svg>
                 <select
                   className={styles.profileSelect}
-                  value={profileName}
+                  value={profileSlug}
                   onChange={(e) => handleProfileChange(e.target.value)}
                   disabled={isSwitchingProfile}
                   aria-label="Switch profile"
                 >
-                  {!knownCurrentProfile && <option value={profileName}>{profileName}</option>}
+                  {!knownCurrentProfile && <option value={profileSlug}>{profileName}</option>}
                   {profilesData?.profiles.map((p) => (
-                    <option key={p.name} value={p.name}>
+                    <option key={p.slug} value={p.slug}>
                       {p.name}
                     </option>
                   ))}
@@ -101,7 +102,7 @@ export function Layout() {
               </span>
             </>
           )}
-          {profileName && jobId && (
+          {profileSlug && jobId && (
             <>
               {' / '}
               <span className={styles.icon} aria-hidden="true">
@@ -119,7 +120,7 @@ export function Layout() {
       <main className={styles.main}>
         {/* Keyed by profile/job so switching either fully remounts the page instead of a stale
             previous profile's data lingering via useJobStatus's keepPreviousData. */}
-        <Outlet key={`${profileName ?? ''}/${jobId ?? ''}`} context={{ autoRefreshPaused } satisfies JobStatusOutletContext} />
+        <Outlet key={`${profileSlug ?? ''}/${jobId ?? ''}`} context={{ autoRefreshPaused } satisfies JobStatusOutletContext} />
       </main>
     </div>
   )

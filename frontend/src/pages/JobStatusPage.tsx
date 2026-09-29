@@ -283,7 +283,7 @@ function PortAddresses({ ports }: { ports: Port[] }) {
 }
 
 export function JobStatusPage() {
-  const { profileName, jobId } = useParams<{ profileName: string; jobId: string }>()
+  const { profileSlug, jobId } = useParams<{ profileSlug: string; jobId: string }>()
   const { autoRefreshPaused } = useOutletContext<JobStatusOutletContext>()
   const pageTitle = `Job: ${jobId ?? ''}`
   useDocumentTitle(pageTitle)
@@ -304,7 +304,7 @@ export function JobStatusPage() {
   )
 
   const { data, isLoading, error } = useJobStatus(
-    profileName ?? '',
+    profileSlug ?? '',
     jobId ?? '',
     {
       q: search,

@@ -7,6 +7,9 @@
   - Refresh interval in seconds for job status page.
 - Configuration contains 1 or more profiles describing a Nomad environment.  These define:
   - Profile name
+  - Slug: an optional URL-friendly identifier used as the profile's URI path segment (e.g.
+    `/profiles/<slug>`). Defaults to the profile name verbatim when unset. Must be unique across profiles
+    (after defaulting), the same as profile name.
   - Nomad service URL (usually references port 4646)
   - Nomad API token (in plaintext)
   - Node hostname template: an optional string used to derive each port's node address, containing

@@ -12,6 +12,7 @@ type errorDetail struct {
 
 type profileDTO struct {
 	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 type profilesResponse struct {
