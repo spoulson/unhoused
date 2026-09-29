@@ -34,6 +34,7 @@ profiles:
 	assert.Equal(t, defaultListenPort, cfg.ListenPort)
 	assert.Equal(t, defaultRefreshIntervalSeconds, cfg.RefreshIntervalSeconds)
 	assert.Equal(t, defaultNodeHostnameTemplate, cfg.Profiles[0].NodeHostnameTemplate)
+	assert.Equal(t, "prod-usw1", cfg.Profiles[0].Slug, "slug defaults to the profile name")
 }
 
 func TestLoadHonorsExplicitValues(t *testing.T) {
@@ -43,6 +44,7 @@ listenPort: 9000
 refreshIntervalSeconds: 10
 profiles:
   - name: staging-euw1
+    slug: staging
     nomadUrl: http://10.0.0.2:4646
     nomadToken: secret
     nodeHostnameTemplate: "{node}.example.internal"
@@ -55,6 +57,7 @@ profiles:
 	assert.Equal(t, 9000, cfg.ListenPort)
 	assert.Equal(t, 10, cfg.RefreshIntervalSeconds)
 	assert.Equal(t, "{node}.example.internal", cfg.Profiles[0].NodeHostnameTemplate)
+	assert.Equal(t, "staging", cfg.Profiles[0].Slug)
 }
 
 func TestLoadValidationErrors(t *testing.T) {
@@ -86,6 +89,31 @@ profiles:
     nomadUrl: http://10.0.0.2:4646
 `,
 			wantErr: "duplicate profile name",
+		},
+		{
+			name: "duplicate profile slug",
+			yaml: `
+profiles:
+  - name: a
+    slug: dup
+    nomadUrl: http://10.0.0.1:4646
+  - name: b
+    slug: dup
+    nomadUrl: http://10.0.0.2:4646
+`,
+			wantErr: "duplicate profile slug",
+		},
+		{
+			name: "duplicate profile slug via default",
+			yaml: `
+profiles:
+  - name: dup
+    nomadUrl: http://10.0.0.1:4646
+  - name: b
+    slug: dup
+    nomadUrl: http://10.0.0.2:4646
+`,
+			wantErr: "duplicate profile slug",
 		},
 		{
 			name: "missing nomad url",

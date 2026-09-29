@@ -22,8 +22,8 @@ export function HomePage() {
       <h1>Profiles</h1>
       <ul className={styles.list}>
         {data?.profiles.map((profile) => (
-          <li key={profile.name}>
-            <Link to={`/profiles/${profile.name}`} className={styles.card}>
+          <li key={profile.slug}>
+            <Link to={`/profile/${profile.slug}`} className={styles.card}>
               <span className={styles.icon} aria-hidden="true">
                 ▣
               </span>

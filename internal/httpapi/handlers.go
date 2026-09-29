@@ -21,6 +21,7 @@ func (s *Server) handleListProfiles(w http.ResponseWriter, r *http.Request) {
 	for _, p := range s.cfg.Profiles {
 		profiles = append(profiles, profileDTO{
 			Name: p.Name,
+			Slug: p.EffectiveSlug(),
 		})
 	}
 
@@ -31,9 +32,9 @@ func (s *Server) handleListProfiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
-	profileName := r.PathValue("profile")
+	profileSlug := r.PathValue("profile")
 
-	_, client, ok := s.profile(profileName)
+	_, client, ok := s.profile(profileSlug)
 	if !ok {
 		writeError(w, http.StatusNotFound, "profile not found")
 		return
@@ -63,10 +64,10 @@ func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
-	profileName := r.PathValue("profile")
+	profileSlug := r.PathValue("profile")
 	jobID := r.PathValue("jobId")
 
-	profile, client, ok := s.profile(profileName)
+	profile, client, ok := s.profile(profileSlug)
 	if !ok {
 		writeError(w, http.StatusNotFound, "profile not found")
 		return

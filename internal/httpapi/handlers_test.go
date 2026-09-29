@@ -154,6 +154,53 @@ func TestHandleListProfiles(t *testing.T) {
 	assert.Equal(t, 5, got.RefreshIntervalSeconds)
 	require.Len(t, got.Profiles, 2)
 	assert.Equal(t, "prod-usw1", got.Profiles[0].Name)
+	assert.Equal(t, "prod-usw1", got.Profiles[0].Slug, "slug defaults to name when unset")
+}
+
+func TestHandleListProfilesUsesConfiguredSlug(t *testing.T) {
+	cfg := &config.Config{
+		RefreshIntervalSeconds: 5,
+		Profiles: []config.Profile{
+			{Name: "prod-usw1", Slug: "prod", NodeHostnameTemplate: "{node}"},
+		},
+	}
+	srv := NewServer(cfg, map[string]nomadclient.API{})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	got := decodeJSON[profilesResponse](t, rec)
+	require.Len(t, got.Profiles, 1)
+	assert.Equal(t, "prod-usw1", got.Profiles[0].Name)
+	assert.Equal(t, "prod", got.Profiles[0].Slug)
+}
+
+func TestHandleListJobsRoutesByConfiguredSlug(t *testing.T) {
+	cfg := &config.Config{
+		RefreshIntervalSeconds: 5,
+		Profiles: []config.Profile{
+			{Name: "prod-usw1", Slug: "prod", NodeHostnameTemplate: "{node}"},
+		},
+	}
+	fake := &fakeNomad{
+		jobs: []*nomadapi.JobListStub{{ID: "web", Name: "web"}},
+	}
+	// clients is keyed by profile Name (the internal identifier), independent of the URI slug.
+	srv := NewServer(cfg, map[string]nomadclient.API{"prod-usw1": fake})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod/jobs", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+
+	// The profile's Name is no longer a valid URI path segment once a distinct Slug is configured.
+	req = httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs", nil)
+	rec = httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
 func TestHandleListJobsUnknownProfile(t *testing.T) {

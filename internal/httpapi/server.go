@@ -35,17 +35,19 @@ func (s *Server) Handler() http.Handler {
 	return mux
 }
 
-// profile looks up a configured profile and its Nomad client by name.
-func (s *Server) profile(name string) (config.Profile, nomadclient.API, bool) {
-	client, ok := s.clients[name]
-	if !ok {
-		return config.Profile{}, nil, false
-	}
-
+// profile looks up a configured profile and its Nomad client by its URI slug (see config.Profile.EffectiveSlug).
+func (s *Server) profile(slug string) (config.Profile, nomadclient.API, bool) {
 	for _, p := range s.cfg.Profiles {
-		if p.Name == name {
-			return p, client, true
+		if p.EffectiveSlug() != slug {
+			continue
 		}
+
+		client, ok := s.clients[p.Name]
+		if !ok {
+			return config.Profile{}, nil, false
+		}
+
+		return p, client, true
 	}
 
 	return config.Profile{}, nil, false

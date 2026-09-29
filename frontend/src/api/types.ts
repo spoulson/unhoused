@@ -5,6 +5,7 @@ export type ClientStatus = 'running' | 'pending' | 'failed' | 'complete' | 'lost
 
 export interface Profile {
   name: string
+  slug: string
 }
 
 export interface ProfilesResponse {

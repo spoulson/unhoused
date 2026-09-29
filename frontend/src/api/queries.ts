@@ -39,22 +39,22 @@ export function useProfiles() {
   })
 }
 
-export function useJobs(profileName: string) {
+export function useJobs(profileSlug: string) {
   return useQuery({
-    queryKey: ['jobs', profileName],
-    queryFn: () => fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(profileName)}/jobs`),
+    queryKey: ['jobs', profileSlug],
+    queryFn: () => fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(profileSlug)}/jobs`),
   })
 }
 
-export function useJobStatus(profileName: string, jobId: string, params: JobStatusParams, paused = false) {
+export function useJobStatus(profileSlug: string, jobId: string, params: JobStatusParams, paused = false) {
   const { data: profiles } = useProfiles()
   const refreshIntervalSeconds = profiles?.refreshIntervalSeconds ?? DEFAULT_REFRESH_INTERVAL_SECONDS
 
   return useQuery({
-    queryKey: ['jobStatus', profileName, jobId, params],
+    queryKey: ['jobStatus', profileSlug, jobId, params],
     queryFn: () =>
       fetchJSON<JobStatusResponse>(
-        `/api/profiles/${encodeURIComponent(profileName)}/jobs/${encodeURIComponent(jobId)}?${jobStatusQueryString(params)}`,
+        `/api/profiles/${encodeURIComponent(profileSlug)}/jobs/${encodeURIComponent(jobId)}?${jobStatusQueryString(params)}`,
       ),
     refetchInterval: paused ? false : refreshIntervalSeconds * 1000,
     // Changing a filter/page/pageSize changes the query key. Without this, TanStack Query would

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useJobs } from '../api/queries'
+import { useJobs, useProfiles } from '../api/queries'
 import type { JobListItem } from '../api/types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -163,10 +163,12 @@ function sortJobs(jobs: JobListItem[], sort: SortState): JobListItem[] {
 }
 
 export function ProfilePage() {
-  const { profileName } = useParams<{ profileName: string }>()
+  const { profileSlug } = useParams<{ profileSlug: string }>()
+  const { data: profiles } = useProfiles()
+  const profileName = profiles?.profiles.find((p) => p.slug === profileSlug)?.name ?? profileSlug
   const pageTitle = `Profile: ${profileName ?? ''}`
   useDocumentTitle(pageTitle)
-  const { data, isLoading, error } = useJobs(profileName ?? '')
+  const { data, isLoading, error } = useJobs(profileSlug ?? '')
   const [, setSearchParams] = useSearchParams()
 
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
@@ -263,7 +265,7 @@ export function ProfilePage() {
                   {paginatedJobs.map((job) => (
                     <tr key={job.id}>
                       <td>
-                        <Link to={`/profiles/${profileName}/jobs/${job.id}`} className={`mono ${styles.jobLink}`}>
+                        <Link to={`/profile/${profileSlug}/jobs/${job.id}`} className={`mono ${styles.jobLink}`}>
                           <span className={styles.jobIcon} aria-hidden="true">
                             ⛟
                           </span>
