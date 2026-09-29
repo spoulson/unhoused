@@ -23,7 +23,7 @@ export function HomePage() {
       <ul className={styles.list}>
         {data?.profiles.map((profile) => (
           <li key={profile.slug}>
-            <Link to={`/profiles/${profile.slug}`} className={styles.card}>
+            <Link to={`/profile/${profile.slug}`} className={styles.card}>
               <span className={styles.icon} aria-hidden="true">
                 ▣
               </span>

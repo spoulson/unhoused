@@ -38,7 +38,7 @@ export function Layout() {
         try {
           const jobs = await fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(newProfileSlug)}/jobs`)
           if (jobs.jobs.some((job) => job.id === jobId)) {
-            navigate(`/profiles/${newProfileSlug}/jobs/${jobId}`)
+            navigate(`/profile/${newProfileSlug}/jobs/${jobId}`)
             return
           }
         } catch {
@@ -46,7 +46,7 @@ export function Layout() {
         }
       }
 
-      navigate(`/profiles/${newProfileSlug}`)
+      navigate(`/profile/${newProfileSlug}`)
     } finally {
       setIsSwitchingProfile(false)
     }
@@ -72,7 +72,7 @@ export function Layout() {
                 ▣
               </span>
               <span className={styles.profileGroup}>
-                <Link to={`/profiles/${profileSlug}`}>{profileName}</Link>
+                <Link to={`/profile/${profileSlug}`}>{profileName}</Link>
                 {/* An inline SVG, not a Unicode glyph, since triangle/chevron characters render
                     inconsistently (sometimes near-invisible) across the app's configured fonts. */}
                 <svg className={styles.dropdownArrow} aria-hidden="true" viewBox="0 0 10 6" width="10" height="6">

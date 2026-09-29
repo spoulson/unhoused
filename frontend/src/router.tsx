@@ -10,8 +10,8 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: 'profiles/:profileSlug', element: <ProfilePage /> },
-      { path: 'profiles/:profileSlug/jobs/:jobId', element: <JobStatusPage /> },
+      { path: 'profile/:profileSlug', element: <ProfilePage /> },
+      { path: 'profile/:profileSlug/jobs/:jobId', element: <JobStatusPage /> },
     ],
   },
 ])

@@ -89,7 +89,7 @@ Service settings, top-level:
 | Field | Meaning |
 |---|---|
 | `name` | Profile identifier, shown in the UI |
-| `slug` | URL-friendly identifier used as the profile's URI path segment (e.g. `/profiles/<slug>`). Optional, defaults to `name` |
+| `slug` | URL-friendly identifier used as the profile's URI path segment (e.g. `/profile/<slug>` in the UI). Optional, defaults to `name` |
 | `nomadUrl` | Nomad HTTP API URL (usually port `4646`) |
 | `nomadToken` | Nomad API token, in plaintext |
 | `nodeHostnameTemplate` | Template for deriving each port's node address, with `{node}` replaced by the Nomad node name (e.g. `{node}.node.us-west1.staging.example.com`). Optional, defaults to `{node}` |
