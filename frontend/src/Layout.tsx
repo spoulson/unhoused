@@ -43,7 +43,7 @@ export function Layout() {
         try {
           const jobs = await fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(newProfileSlug)}/jobs`)
           if (jobs.jobs.some((job) => job.id === jobId)) {
-            navigate(`/profile/${newProfileSlug}/jobs/${jobId}`)
+            navigate(`/profile/${newProfileSlug}/job/${jobId}`)
             return
           }
         } catch {
