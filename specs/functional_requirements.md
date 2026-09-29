@@ -111,3 +111,11 @@ fields:
   (version list pagination).
 - Page updates periodically based on configuration.
   - Default every 5 seconds.
+- A header toggle lets the user opt in to browser (OS-level) notifications for this job, off by default so
+  no permission prompt appears unasked. Once enabled, a notification fires whenever the job's deployment
+  status changes (including into "deployed" — a rollout finishing is exactly what's worth notifying about,
+  even though the on-page badge itself stays silent for that state), regardless of whether the tab is
+  focused. The choice is remembered per-browser and scoped to whichever job page is currently open, not a
+  background watch across all jobs. The notification title is "Deployment `<job name>`"; the body is
+  "`<emoji>` `<job name>` `<deployment status>`", where the emoji indicates the new status: ✅ deployed,
+  🔄 deploying, ❌ failed.

@@ -1,14 +1,10 @@
 import type { DeploymentStatus } from '../api/types'
+import { DEPLOYMENT_STATUS_LABELS } from '../lib/deploymentStatus'
 import styles from './DeploymentBadge.module.css'
 
 // "deployed" (fully rolled out) is the default, implied state and never renders a badge — only the
 // exceptions ("deploying" and "failed") are called out.
 type NoteworthyStatus = Extract<DeploymentStatus, 'deploying' | 'failed'>
-
-const LABELS: Record<NoteworthyStatus, string> = {
-  deploying: 'deploying',
-  failed: 'deploy failed',
-}
 
 const ICONS: Record<NoteworthyStatus, string> = {
   deploying: '⟳',
@@ -33,9 +29,9 @@ export function DeploymentBadge({ status }: DeploymentBadgeProps) {
   }
 
   return (
-    <span className={`${styles.badge} ${styles[status]}`} title={`Deployment: ${LABELS[status]}`}>
+    <span className={`${styles.badge} ${styles[status]}`} title={`Deployment: ${DEPLOYMENT_STATUS_LABELS[status]}`}>
       <span aria-hidden="true">{ICONS[status]}</span>
-      {LABELS[status]}
+      {DEPLOYMENT_STATUS_LABELS[status]}
     </span>
   )
 }
