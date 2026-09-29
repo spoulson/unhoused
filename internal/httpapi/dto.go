@@ -21,9 +21,11 @@ type profilesResponse struct {
 }
 
 type jobListItemDTO struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	SubmitTime time.Time `json:"submitTime"`
+	ID               string    `json:"id"`
+	Name             string    `json:"name"`
+	SubmitTime       time.Time `json:"submitTime"`
+	Status           string    `json:"status"`
+	DeploymentStatus string    `json:"deploymentStatus"`
 }
 
 type jobsResponse struct {
@@ -31,9 +33,10 @@ type jobsResponse struct {
 }
 
 type jobDTO struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Status           string `json:"status"`
+	DeploymentStatus string `json:"deploymentStatus"`
 }
 
 type versionGroupDTO struct {

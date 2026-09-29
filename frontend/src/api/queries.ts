@@ -40,9 +40,16 @@ export function useProfiles() {
 }
 
 export function useJobs(profileSlug: string) {
+  const { data: profiles } = useProfiles()
+  const refreshIntervalSeconds = profiles?.refreshIntervalSeconds ?? DEFAULT_REFRESH_INTERVAL_SECONDS
+
   return useQuery({
     queryKey: ['jobs', profileSlug],
     queryFn: () => fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(profileSlug)}/jobs`),
+    // Polled (like useJobStatus below) so a job's deployment status flips from "deploying" to
+    // "deployed" on the Profile Page without a manual reload.
+    refetchInterval: refreshIntervalSeconds * 1000,
+    placeholderData: keepPreviousData,
   })
 }
 

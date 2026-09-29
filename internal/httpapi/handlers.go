@@ -40,19 +40,47 @@ func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stubs, err := client.ListJobs(r.Context())
-	if err != nil {
-		status, message := classifyNomadErr(err, "job not found")
+	ctx := r.Context()
+
+	// stubs and deployments are independent Nomad calls, fetched concurrently
+	// (same pattern as handleJobStatus below).
+	var (
+		stubs          []*nomadapi.JobListStub
+		deployments    []*nomadapi.Deployment
+		stubsErr       error
+		deploymentsErr error
+		wg             sync.WaitGroup
+	)
+
+	wg.Go(func() {
+		stubs, stubsErr = client.ListJobs(ctx)
+	})
+	wg.Go(func() {
+		deployments, deploymentsErr = client.ListDeployments(ctx)
+	})
+	wg.Wait()
+
+	if stubsErr != nil {
+		status, message := classifyNomadErr(stubsErr, "job not found")
+		writeError(w, status, message)
+		return
+	}
+	if deploymentsErr != nil {
+		status, message := classifyNomadErr(deploymentsErr, "job not found")
 		writeError(w, status, message)
 		return
 	}
 
+	deploymentStatuses := latestDeploymentStatuses(deployments)
+
 	jobs := make([]jobListItemDTO, 0, len(stubs))
 	for _, stub := range stubs {
 		jobs = append(jobs, jobListItemDTO{
-			ID:         stub.ID,
-			Name:       stub.Name,
-			SubmitTime: time.Unix(0, stub.SubmitTime),
+			ID:               stub.ID,
+			Name:             stub.Name,
+			SubmitTime:       time.Unix(0, stub.SubmitTime),
+			Status:           deriveJobListStatus(stub),
+			DeploymentStatus: deploymentStatuses[stub.ID],
 		})
 	}
 
@@ -75,16 +103,18 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// job, versions, and allocStubs are independent Nomad calls, fetched
-	// concurrently to cut this request's latency roughly to a third.
+	// job, versions, allocStubs, and deployments are independent Nomad calls,
+	// fetched concurrently to cut this request's latency.
 	var (
-		job           *nomadapi.Job
-		versions      []*nomadapi.Job
-		allocStubs    []*nomadapi.AllocationListStub
-		jobErr        error
-		versionsErr   error
-		allocationErr error
-		wg            sync.WaitGroup
+		job            *nomadapi.Job
+		versions       []*nomadapi.Job
+		allocStubs     []*nomadapi.AllocationListStub
+		deployments    []*nomadapi.Deployment
+		jobErr         error
+		versionsErr    error
+		allocationErr  error
+		deploymentsErr error
+		wg             sync.WaitGroup
 	)
 
 	wg.Go(func() {
@@ -95,6 +125,9 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	})
 	wg.Go(func() {
 		allocStubs, allocationErr = client.JobAllocations(ctx, jobID)
+	})
+	wg.Go(func() {
+		deployments, deploymentsErr = client.ListDeployments(ctx)
 	})
 	wg.Wait()
 
@@ -110,6 +143,11 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if allocationErr != nil {
 		status, message := classifyNomadErr(allocationErr, "job not found")
+		writeError(w, status, message)
+		return
+	}
+	if deploymentsErr != nil {
+		status, message := classifyNomadErr(deploymentsErr, "job not found")
 		writeError(w, status, message)
 		return
 	}
@@ -218,9 +256,10 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, jobStatusResponse{
 		Job: jobDTO{
-			ID:     stringVal(job.ID),
-			Name:   stringVal(job.Name),
-			Status: deriveJobStatus(job),
+			ID:               stringVal(job.ID),
+			Name:             stringVal(job.Name),
+			Status:           deriveJobStatus(job),
+			DeploymentStatus: latestDeploymentStatuses(deployments)[jobID],
 		},
 		VersionGroups: versionGroups,
 		Pagination:    pagination,

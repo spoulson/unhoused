@@ -2,6 +2,7 @@
 
 export type JobStatus = 'running' | 'pending' | 'stopped' | 'dead'
 export type ClientStatus = 'running' | 'pending' | 'failed' | 'complete' | 'lost'
+export type DeploymentStatus = 'deployed' | 'deploying' | 'failed' | ''
 
 export interface Profile {
   name: string
@@ -17,6 +18,8 @@ export interface JobListItem {
   id: string
   name: string
   submitTime: string
+  status: JobStatus
+  deploymentStatus: DeploymentStatus
 }
 
 export interface JobsResponse {
@@ -27,6 +30,7 @@ export interface Job {
   id: string
   name: string
   status: JobStatus
+  deploymentStatus: DeploymentStatus
 }
 
 export interface VersionGroup {

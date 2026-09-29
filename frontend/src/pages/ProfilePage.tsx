@@ -2,15 +2,17 @@ import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useJobs, useProfiles } from '../api/queries'
 import type { JobListItem } from '../api/types'
+import { DeploymentBadge } from '../components/DeploymentBadge'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { StatusBadge } from '../components/StatusBadge'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import styles from './ProfilePage.module.css'
 
-type SortColumn = 'name' | 'submitTime'
+type SortColumn = 'name' | 'status' | 'deploymentStatus' | 'submitTime'
 type SortDirection = 'asc' | 'desc' | 'none'
 
-const SORT_COLUMNS: SortColumn[] = ['name', 'submitTime']
+const SORT_COLUMNS: SortColumn[] = ['name', 'status', 'deploymentStatus', 'submitTime']
 const SORT_DIRECTIONS: SortDirection[] = ['asc', 'desc', 'none']
 
 // Clicking a column advances it through this cycle.
@@ -156,6 +158,12 @@ function sortJobs(jobs: JobListItem[], sort: SortState): JobListItem[] {
     if (sort.column === 'name') {
       return a.name.localeCompare(b.name)
     }
+    if (sort.column === 'status') {
+      return a.status.localeCompare(b.status)
+    }
+    if (sort.column === 'deploymentStatus') {
+      return a.deploymentStatus.localeCompare(b.deploymentStatus)
+    }
     return new Date(a.submitTime).getTime() - new Date(b.submitTime).getTime()
   })
 
@@ -258,6 +266,8 @@ export function ProfilePage() {
                 <thead>
                   <tr>
                     <SortableHeader column="name" label="Job" sort={sort} onClick={handleSortClick} />
+                    <SortableHeader column="status" label="Status" sort={sort} onClick={handleSortClick} />
+                    <SortableHeader column="deploymentStatus" label="Deployment" sort={sort} onClick={handleSortClick} />
                     <SortableHeader column="submitTime" label="Submitted" sort={sort} onClick={handleSortClick} />
                   </tr>
                 </thead>
@@ -271,6 +281,12 @@ export function ProfilePage() {
                           </span>
                           {job.name}
                         </Link>
+                      </td>
+                      <td>
+                        <StatusBadge status={job.status} />
+                      </td>
+                      <td>
+                        <DeploymentBadge status={job.deploymentStatus} />
                       </td>
                       <td>{new Date(job.submitTime).toLocaleString()}</td>
                     </tr>

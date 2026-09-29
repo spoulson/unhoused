@@ -21,12 +21,24 @@ type jobDef struct {
 	submitTime  func(now time.Time) time.Time
 	versions    func(now time.Time) []*nomadapi.Job
 	allocations func(now time.Time) []simAllocation
+	// deployments is nil for jobs with no deployment history at all (e.g. no
+	// `update` block), matching Nomad's GET /v1/deployments never returning
+	// an entry for such jobs.
+	deployments func(now time.Time) []*nomadapi.Deployment
 }
 
 // newStaticJob builds a jobDef whose versions/allocations never change —
 // most demo jobs represent a Nomad job at rest, long after its last
-// deployment finished.
-func newStaticJob(id, name string, stop bool, status string, latestSubmit time.Time, versions []*nomadapi.Job, allocs []simAllocation) jobDef {
+// deployment finished. deploymentStatus is the Nomad deployment Status
+// (e.g. "successful", "failed") reported for the job's one and only
+// deployment; "" means the job has no deployment at all.
+func newStaticJob(id, name string, stop bool, status string, latestSubmit time.Time, versions []*nomadapi.Job, allocs []simAllocation, deploymentStatus string) jobDef {
+	var deployments func(time.Time) []*nomadapi.Deployment
+	if deploymentStatus != "" {
+		deployment := simDeployment(id, deploymentStatus, 1)
+		deployments = func(time.Time) []*nomadapi.Deployment { return []*nomadapi.Deployment{deployment} }
+	}
+
 	return jobDef{
 		id:          id,
 		name:        name,
@@ -35,6 +47,7 @@ func newStaticJob(id, name string, stop bool, status string, latestSubmit time.T
 		submitTime:  func(time.Time) time.Time { return latestSubmit },
 		versions:    func(time.Time) []*nomadapi.Job { return versions },
 		allocations: func(time.Time) []simAllocation { return allocs },
+		deployments: deployments,
 	}
 }
 
@@ -96,7 +109,7 @@ func webFrontendJob(epoch time.Time) jobDef {
 	}
 	allocs := stableAllocs(id, "web", version, 8, 0, "running", "run", []string{"http", "https"})
 
-	return newStaticJob(id, id, false, "running", submitTime, versions, allocs)
+	return newStaticJob(id, id, false, "running", submitTime, versions, allocs, "successful")
 }
 
 // apiGatewayJob has two versions present at once with no active rollout —
@@ -125,11 +138,12 @@ func apiGatewayJob(epoch time.Time) jobDef {
 		stableAllocs(id, "api", oldVersion, 1, 13, "running", "run", []string{"http"})...,
 	)
 
-	return newStaticJob(id, id, false, "running", newSubmit, versions, allocs)
+	return newStaticJob(id, id, false, "running", newSubmit, versions, allocs, "successful")
 }
 
 // batchWorkerJob includes a failed allocation among otherwise-healthy ones,
-// to exercise the "failed" status color/filter.
+// to exercise the "failed" status color/filter, and reports a failed
+// deployment for the same reason on the Profile Page.
 func batchWorkerJob(epoch time.Time) jobDef {
 	const id = "batch-worker"
 	const version = uint64(7)
@@ -144,7 +158,7 @@ func batchWorkerJob(epoch time.Time) jobDef {
 		stableAllocs(id, "worker", version, 1, 5, "failed", "stop", nil)...,
 	)
 
-	return newStaticJob(id, id, false, "running", submitTime, versions, allocs)
+	return newStaticJob(id, id, false, "running", submitTime, versions, allocs, "failed")
 }
 
 // cronSchedulerJob is a minimal single-allocation job.
@@ -159,7 +173,7 @@ func cronSchedulerJob(epoch time.Time) jobDef {
 	}
 	allocs := stableAllocs(id, "cron", version, 1, 6, "running", "run", nil)
 
-	return newStaticJob(id, id, false, "running", submitTime, versions, allocs)
+	return newStaticJob(id, id, false, "running", submitTime, versions, allocs, "")
 }
 
 // legacyCheckoutJob is stopped (job.Stop=true), with only terminal
@@ -176,5 +190,5 @@ func legacyCheckoutJob(epoch time.Time) jobDef {
 	}
 	allocs := stableAllocs(id, "checkout", version, 2, 7, "complete", "stop", nil)
 
-	return newStaticJob(id, id, true, "dead", submitTime, versions, allocs)
+	return newStaticJob(id, id, true, "dead", submitTime, versions, allocs, "")
 }

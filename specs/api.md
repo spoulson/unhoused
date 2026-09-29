@@ -52,10 +52,23 @@ Response `200`:
 ```json
 {
   "jobs": [
-    { "id": "web", "name": "web", "submitTime": "2026-08-10T12:00:00Z" }
+    {
+      "id": "web",
+      "name": "web",
+      "submitTime": "2026-08-10T12:00:00Z",
+      "status": "running",
+      "deploymentStatus": "deployed"
+    }
   ]
 }
 ```
+
+- `status` is the same running/pending/stopped/dead indicator as `GET /api/profiles/{profile}/jobs/{jobId}`'s
+  `job.status`.
+- `deploymentStatus` reflects the job's most recent deployment (Nomad's `GET /v1/deployments`, the highest
+  `CreateIndex` entry for the job): `"deployed"` (Nomad status `successful`), `"deploying"` (`running`,
+  `paused`, `pending`, `blocked`, `unblocking`, `initializing`), or `"failed"` (`failed`, `cancelled`). `""`
+  for jobs with no deployment at all — batch/system jobs, or service jobs without an `update` block.
 
 Errors: `404` if `{profile}` doesn't match a configured profile; `502` if the Nomad API call fails.
 
@@ -85,7 +98,7 @@ Response `200`:
 
 ```json
 {
-  "job": { "id": "web", "name": "web", "status": "running" },
+  "job": { "id": "web", "name": "web", "status": "running", "deploymentStatus": "deployed" },
   "versionGroups": [
     {
       "version": 3,
@@ -125,6 +138,8 @@ Response `200`:
 
 - `job.status` is the top-level indicator for the Job Status Page header: one of `running`, `pending`,
   `stopped`, or `dead`.
+- `job.deploymentStatus` is the same `"deployed"`/`"deploying"`/`"failed"`/`""` value as
+  `GET /api/profiles/{profile}/jobs`'s `deploymentStatus` above, scoped to this one job.
 - `versionGroups` is sorted newest version first; `statusCounts` keys are the Nomad client statuses
   (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
   unaffected by the filter query parameters above — it represents overall job health, not the filtered

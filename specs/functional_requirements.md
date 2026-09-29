@@ -48,14 +48,23 @@ its specific fields/columns, and its defaults — this section describes the sha
 - Page title is "Profile: `<profile name>`", shown both as the browser tab title and as the page's H1
   heading.
 - Search matches job name.
-- Sortable columns: Job, Submitted. Default sort is Submitted, descending.
+- Each job's Status column shows the same running/pending/stopped/dead indicator as the Job Status Page
+  header. A separate Deployment column shows an indicator only when the job's most recent deployment is
+  still in progress ("deploying") or failed/was cancelled ("deploy failed"); a fully rolled-out deployment
+  ("deployed") is the default, implied state and shows no indicator, same as a job with no deployment at
+  all (batch/system jobs, or service jobs without an `update` block).
+- Sortable columns: Job, Status, Deployment, Submitted. Default sort is Submitted, descending.
 - URL query params: `q` (search), `sort`/`dir` (sort column/direction), `page`/`pageSize` (pagination).
+- Page updates periodically based on configuration (same refresh interval as the Job Status Page), so a
+  job's deployment indicator disappears once "deploying" finishes, without a manual reload.
 
 ## Job Status Page
 
 - Page title is "Job: `<job id>`", shown both as the browser tab title and as the page's H1 heading
   (alongside the running/stopped/etc. indicator described next).
-- Show indicator whether job status is currently running, stopped, etc.
+- Show indicator whether job status is currently running, stopped, etc., plus the same deployment
+  indicator as the Profile Page's Deployment column ("deploying"/"deploy failed"; no indicator for
+  "deployed" or no deployment) shown next to it.
 - List the counts of allocations by version, then by status.
   - Status refers to running, stopped, etc.
   - Also shows last modified time of newest allocation in the group.

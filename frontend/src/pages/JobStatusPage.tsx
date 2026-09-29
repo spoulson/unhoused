@@ -4,6 +4,7 @@ import type { JobStatusOutletContext } from '../Layout'
 import { useJobStatus } from '../api/queries'
 import type { ClientStatus, Port } from '../api/types'
 import { CopyButton } from '../components/CopyButton'
+import { DeploymentBadge } from '../components/DeploymentBadge'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
@@ -466,6 +467,7 @@ export function JobStatusPage() {
         {jobId}
         <span className={styles.statusBadge}>
           <StatusBadge status={data.job.status} />
+          <DeploymentBadge status={data.job.deploymentStatus} />
         </span>
       </h1>
 

@@ -34,6 +34,64 @@ func TestDeriveJobStatus(t *testing.T) {
 	}
 }
 
+func TestDeriveJobListStatus(t *testing.T) {
+	tests := []struct {
+		name string
+		stub *nomadapi.JobListStub
+		want string
+	}{
+		{"stopped overrides status", &nomadapi.JobListStub{Stop: true, Status: "running"}, "stopped"},
+		{"running passthrough", &nomadapi.JobListStub{Stop: false, Status: "running"}, "running"},
+		{"dead passthrough", &nomadapi.JobListStub{Status: "dead"}, "dead"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deriveJobListStatus(tt.stub)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDeploymentStatusLabel(t *testing.T) {
+	tests := []struct {
+		nomadStatus string
+		want        string
+	}{
+		{"successful", "deployed"},
+		{"failed", "failed"},
+		{"cancelled", "failed"},
+		{"running", "deploying"},
+		{"paused", "deploying"},
+		{"pending", "deploying"},
+		{"blocked", "deploying"},
+		{"unblocking", "deploying"},
+		{"initializing", "deploying"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.nomadStatus, func(t *testing.T) {
+			got := deploymentStatusLabel(tt.nomadStatus)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestLatestDeploymentStatuses(t *testing.T) {
+	deployments := []*nomadapi.Deployment{
+		nil, // tolerated
+		{JobID: "web", Status: "successful", CreateIndex: 1},
+		{JobID: "web", Status: "running", CreateIndex: 2}, // newer — should win
+		{JobID: "worker", Status: "cancelled", CreateIndex: 5},
+	}
+
+	got := latestDeploymentStatuses(deployments)
+
+	assert.Equal(t, "deploying", got["web"], "the higher-CreateIndex deployment wins")
+	assert.Equal(t, "failed", got["worker"])
+	assert.NotContains(t, got, "no-such-job", "jobs with no deployment have no entry")
+}
+
 func TestLastModifiedSeconds(t *testing.T) {
 	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
 
