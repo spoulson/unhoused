@@ -97,6 +97,17 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
+// simDeployment builds a minimal *nomadapi.Deployment carrying just the
+// fields internal/httpapi/derive.go's latestDeploymentStatuses reads
+// (JobID/Status/CreateIndex).
+func simDeployment(jobID, status string, createIndex uint64) *nomadapi.Deployment {
+	return &nomadapi.Deployment{
+		JobID:       jobID,
+		Status:      status,
+		CreateIndex: createIndex,
+	}
+}
+
 // jobVersion builds the nomadapi.Job returned for one entry of a job's
 // version history — only the fields unhoused actually reads (see
 // internal/nomadclient/client.go and internal/httpapi/derive.go) are

@@ -62,6 +62,14 @@ func newDeployingJob(spec deployJobSpec) jobDef {
 		allocations: func(now time.Time) []simAllocation {
 			return deployAllocations(spec, now)
 		},
+		deployments: func(now time.Time) []*nomadapi.Deployment {
+			_, newVersion, rolloutElapsed := deployCycleState(spec, now)
+			status := "successful"
+			if rolloutElapsed < deployRolloutDuration {
+				status = "running"
+			}
+			return []*nomadapi.Deployment{simDeployment(spec.id, status, newVersion)}
+		},
 	}
 }
 

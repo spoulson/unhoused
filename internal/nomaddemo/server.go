@@ -48,6 +48,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/job/{jobId}/allocations", s.handleJobAllocations)
 	mux.HandleFunc("GET /v1/allocation/{allocId}", s.handleAllocationInfo)
 	mux.HandleFunc("GET /v1/nodes", s.handleListNodes)
+	mux.HandleFunc("GET /v1/deployments", s.handleListDeployments)
 	return mux
 }
 
@@ -131,6 +132,23 @@ func (s *Server) handleAllocationInfo(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListNodes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, nodeListStubs())
+}
+
+// handleListDeployments returns every job's current deployment (see
+// jobDef.deployments), matching Nomad's GET /v1/deployments returning
+// deployments across all jobs rather than being scoped to one.
+func (s *Server) handleListDeployments(w http.ResponseWriter, r *http.Request) {
+	now := s.now()
+
+	var deployments []*nomadapi.Deployment
+	for _, j := range s.jobs {
+		if j.deployments == nil {
+			continue
+		}
+		deployments = append(deployments, j.deployments(now)...)
+	}
+
+	writeJSON(w, deployments)
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

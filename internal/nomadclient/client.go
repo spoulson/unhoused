@@ -20,6 +20,7 @@ type API interface {
 	AllocationInfo(ctx context.Context, allocID string) (*nomadapi.Allocation, error)
 	GetAllocationPorts(ctx context.Context, allocID string) (AllocationPorts, error)
 	ListNodes(ctx context.Context) ([]*nomadapi.NodeListStub, error)
+	ListDeployments(ctx context.Context) ([]*nomadapi.Deployment, error)
 }
 
 const (
@@ -205,6 +206,20 @@ func (c *Client) ListNodes(ctx context.Context) ([]*nomadapi.NodeListStub, error
 	}
 
 	return nodes, nil
+}
+
+// ListDeployments returns all deployments across every job in the cluster,
+// used to derive each job's current deployment status (see
+// specs/api.md's GET /api/profiles/{profile}/jobs).
+func (c *Client) ListDeployments(ctx context.Context) ([]*nomadapi.Deployment, error) {
+	q := (&nomadapi.QueryOptions{}).WithContext(ctx)
+
+	deployments, _, err := c.nomad.Deployments().List(q)
+	if err != nil {
+		return nil, err
+	}
+
+	return deployments, nil
 }
 
 // nodeIPFromAllocation returns the host IP an allocation is running on,

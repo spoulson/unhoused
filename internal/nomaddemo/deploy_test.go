@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testDeploySpec(epoch time.Time) deployJobSpec {
@@ -111,5 +112,25 @@ func TestDeployAllocations(t *testing.T) {
 		first := deployAllocations(spec, at)
 		second := deployAllocations(spec, at)
 		assert.Equal(t, first, second)
+	})
+}
+
+func TestNewDeployingJobDeployments(t *testing.T) {
+	epoch := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	spec := testDeploySpec(epoch)
+	job := newDeployingJob(spec)
+
+	t.Run("mid rollout reports a running deployment", func(t *testing.T) {
+		deployments := job.deployments(epoch.Add(2 * time.Minute))
+		require.Len(t, deployments, 1)
+		assert.Equal(t, spec.id, deployments[0].JobID)
+		assert.Equal(t, "running", deployments[0].Status)
+	})
+
+	t.Run("idle period reports a successful deployment", func(t *testing.T) {
+		deployments := job.deployments(epoch.Add(deployRolloutDuration + 30*time.Second))
+		require.Len(t, deployments, 1)
+		assert.Equal(t, spec.id, deployments[0].JobID)
+		assert.Equal(t, "successful", deployments[0].Status)
 	})
 }

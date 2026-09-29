@@ -32,16 +32,65 @@ func stringVal(s *string) string {
 	return *s
 }
 
+// jobStatusFromFields maps a job's stop flag and raw Nomad status to the
+// running/pending/stopped/dead indicator shown across the UI.
+func jobStatusFromFields(stop bool, status string) string {
+	if stop {
+		return "stopped"
+	}
+	return status
+}
+
 // deriveJobStatus maps a Nomad job to the running/pending/stopped/dead
 // indicator shown on the Job Status Page header.
 func deriveJobStatus(job *nomadapi.Job) string {
-	if job.Stop != nil && *job.Stop {
-		return "stopped"
+	return jobStatusFromFields(job.Stop != nil && *job.Stop, stringVal(job.Status))
+}
+
+// deriveJobListStatus maps a job list stub (used by the Profile Page's jobs
+// table) to the same running/pending/stopped/dead indicator as
+// deriveJobStatus.
+func deriveJobListStatus(stub *nomadapi.JobListStub) string {
+	return jobStatusFromFields(stub.Stop, stub.Status)
+}
+
+// deploymentStatusLabel maps a Nomad deployment's Status to the
+// deployed/deploying/failed indicator shown next to the Profile Page's job
+// status badge, per specs/api.md.
+func deploymentStatusLabel(nomadStatus string) string {
+	switch nomadStatus {
+	case "successful":
+		return "deployed"
+	case "failed", "cancelled":
+		return "failed"
+	default:
+		// "running", "paused", "pending", "blocked", "unblocking", "initializing".
+		return "deploying"
 	}
-	if job.Status != nil {
-		return *job.Status
+}
+
+// latestDeploymentStatuses builds a job ID -> deployment status ("deployed"/
+// "deploying"/"failed") lookup from the cluster's deployments, keeping only
+// each job's most recent deployment (highest CreateIndex). Jobs with no
+// deployment at all (batch/system jobs, or service jobs without an update
+// block) have no entry, so callers reading a missing key get "" naturally.
+func latestDeploymentStatuses(deployments []*nomadapi.Deployment) map[string]string {
+	latest := make(map[string]*nomadapi.Deployment, len(deployments))
+	for _, d := range deployments {
+		if d == nil {
+			continue
+		}
+		current, ok := latest[d.JobID]
+		if !ok || d.CreateIndex > current.CreateIndex {
+			latest[d.JobID] = d
+		}
 	}
-	return ""
+
+	statuses := make(map[string]string, len(latest))
+	for jobID, d := range latest {
+		statuses[jobID] = deploymentStatusLabel(d.Status)
+	}
+	return statuses
 }
 
 // versionSubmitTimes builds a version -> SubmitTime lookup from the job's

@@ -37,6 +37,9 @@ type fakeNomad struct {
 
 	nodes    []*nomadapi.NodeListStub
 	nodesErr error
+
+	deployments    []*nomadapi.Deployment
+	deploymentsErr error
 }
 
 var _ nomadclient.API = (*fakeNomad)(nil)
@@ -93,6 +96,10 @@ func (f *fakeNomad) GetAllocationPorts(_ context.Context, allocID string) (nomad
 
 func (f *fakeNomad) ListNodes(context.Context) ([]*nomadapi.NodeListStub, error) {
 	return f.nodes, f.nodesErr
+}
+
+func (f *fakeNomad) ListDeployments(context.Context) ([]*nomadapi.Deployment, error) {
+	return f.deployments, f.deploymentsErr
 }
 
 // realNotFoundErr round-trips a request through the actual Nomad SDK against
@@ -237,8 +244,58 @@ func TestHandleListJobsSortedNewestFirst(t *testing.T) {
 	assert.Equal(t, "old", got.Jobs[1].ID)
 }
 
+func TestHandleListJobsStatusAndDeploymentStatus(t *testing.T) {
+	fake := &fakeNomad{
+		jobs: []*nomadapi.JobListStub{
+			{ID: "deploying-job", Name: "deploying-job", Status: "running"},
+			{ID: "deployed-job", Name: "deployed-job", Status: "running"},
+			{ID: "failed-deploy-job", Name: "failed-deploy-job", Status: "running"},
+			{ID: "stopped-job", Name: "stopped-job", Status: "running", Stop: true},
+			{ID: "no-deploy-job", Name: "no-deploy-job", Status: "running"},
+		},
+		deployments: []*nomadapi.Deployment{
+			// Superseded by the later CreateIndex entry below — must not win.
+			{JobID: "deploying-job", Status: "successful", CreateIndex: 1},
+			{JobID: "deploying-job", Status: "running", CreateIndex: 2},
+			{JobID: "deployed-job", Status: "successful", CreateIndex: 1},
+			{JobID: "failed-deploy-job", Status: "cancelled", CreateIndex: 1},
+		},
+	}
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code, "body=%s", rec.Body.String())
+
+	got := decodeJSON[jobsResponse](t, rec)
+	byID := make(map[string]jobListItemDTO, len(got.Jobs))
+	for _, j := range got.Jobs {
+		byID[j.ID] = j
+	}
+
+	assert.Equal(t, "running", byID["deploying-job"].Status)
+	assert.Equal(t, "deploying", byID["deploying-job"].DeploymentStatus, "latest deployment (by CreateIndex) wins")
+	assert.Equal(t, "deployed", byID["deployed-job"].DeploymentStatus)
+	assert.Equal(t, "failed", byID["failed-deploy-job"].DeploymentStatus)
+	assert.Equal(t, "stopped", byID["stopped-job"].Status, "Stop overrides the raw Nomad status")
+	assert.Equal(t, "", byID["no-deploy-job"].DeploymentStatus, "no deployment at all")
+}
+
 func TestHandleListJobsNomadError(t *testing.T) {
 	fake := &fakeNomad{jobsErr: errors.New("connection refused")}
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadGateway, rec.Code)
+}
+
+func TestHandleListJobsDeploymentsNomadError(t *testing.T) {
+	fake := &fakeNomad{deploymentsErr: errors.New("connection refused")}
 	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs", nil)
@@ -260,6 +317,20 @@ func TestHandleJobStatusUnknownJob(t *testing.T) {
 
 	got := decodeJSON[errorEnvelope](t, rec)
 	assert.Equal(t, "job not found", got.Error.Message)
+}
+
+func TestHandleJobStatusDeploymentsNomadError(t *testing.T) {
+	fake := &fakeNomad{
+		job:            &nomadapi.Job{ID: ptr("web"), Name: ptr("web"), Status: ptr("running"), Stop: ptr(false)},
+		deploymentsErr: errors.New("connection refused"),
+	}
+	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs/web", nil)
+	rec := httptest.NewRecorder()
+	srv.Handler().ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadGateway, rec.Code)
 }
 
 func TestHandleJobStatusHappyPath(t *testing.T) {
@@ -308,6 +379,10 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 				},
 			},
 		},
+		deployments: []*nomadapi.Deployment{
+			{JobID: "web", Status: "running", CreateIndex: 1},
+			{JobID: "other-job", Status: "successful", CreateIndex: 99},
+		},
 	}
 
 	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
@@ -323,6 +398,7 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 
 	assert.Equal(t, "web", got.Job.ID)
 	assert.Equal(t, "running", got.Job.Status)
+	assert.Equal(t, "deploying", got.Job.DeploymentStatus, "scoped to this job's own deployment, not other-job's")
 
 	require.Len(t, got.VersionGroups, 1)
 	vg := got.VersionGroups[0]
