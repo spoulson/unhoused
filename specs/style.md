@@ -11,4 +11,7 @@
   sets which mode is shown to a visitor who hasn't chosen one yet. Defaults to light if unset.
 - Use Kefa font for most text.
 - Use AnonymicePro Nerd Font for monospaced text.
+- The deployment status badge's "deploying" icon is an animated circular-arrow spinner (GIF, since
+  it has no live `currentColor` equivalent), colored per theme to match the badge text color
+  (`frontend/public/icons/deploying-spinner-{light,dark}.gif`).
 

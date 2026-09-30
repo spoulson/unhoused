@@ -1,13 +1,21 @@
 import type { DeploymentStatus } from '../api/types'
 import { deploymentStatusBadgeText, deploymentStatusTooltip } from '../lib/deploymentStatus'
+import { useTheme } from '../theme/ThemeContext'
 import styles from './DeploymentBadge.module.css'
 
 type KnownStatus = Exclude<DeploymentStatus, ''>
 
-const ICONS: Record<KnownStatus, string> = {
+const ICONS: Record<Exclude<KnownStatus, 'deploying'>, string> = {
   deployed: '✓',
-  deploying: '⟳',
   failed: '✗',
+}
+
+// "deploying" gets an animated spinner instead of a static glyph — a separate file per theme since
+// GIF pixels are baked in (no `currentColor` equivalent), colored to match each theme's --gb-bg0, the
+// same color the other badge icons already render in via `color: var(--gb-bg0)` + currentColor.
+const DEPLOYING_SPINNER_SRC: Record<'light' | 'dark', string> = {
+  light: '/icons/deploying-spinner-light.gif',
+  dark: '/icons/deploying-spinner-dark.gif',
 }
 
 function isKnownStatus(status: DeploymentStatus): status is KnownStatus {
@@ -27,6 +35,8 @@ interface DeploymentBadgeProps {
 // Renders nothing for jobs with no deployment at all (batch/system jobs, or service jobs without an
 // `update` block) — see specs/api.md.
 export function DeploymentBadge({ status, elapsedSeconds, since }: DeploymentBadgeProps) {
+  const { theme } = useTheme()
+
   if (!isKnownStatus(status)) {
     return null
   }
@@ -36,7 +46,11 @@ export function DeploymentBadge({ status, elapsedSeconds, since }: DeploymentBad
       className={`${styles.badge} ${styles[status]}`}
       title={deploymentStatusTooltip(status, elapsedSeconds, since)}
     >
-      <span aria-hidden="true">{ICONS[status]}</span>
+      {status === 'deploying' ? (
+        <img className={styles.spinner} src={DEPLOYING_SPINNER_SRC[theme]} alt="" aria-hidden="true" />
+      ) : (
+        <span aria-hidden="true">{ICONS[status]}</span>
+      )}
       {deploymentStatusBadgeText(status, elapsedSeconds)}
     </span>
   )

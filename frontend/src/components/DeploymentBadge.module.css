@@ -21,3 +21,9 @@
 .failed {
   background: var(--gb-red);
 }
+
+.spinner {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
