@@ -49,22 +49,24 @@ its specific fields/columns, and its defaults — this section describes the sha
   heading.
 - Search matches job name.
 - Each job's Status column shows the same running/pending/stopped/dead indicator as the Job Status Page
-  header. A separate Deployment column shows an indicator only when the job's most recent deployment is
-  still in progress ("deploying") or failed/was cancelled ("deploy failed"); a fully rolled-out deployment
-  ("deployed") is the default, implied state and shows no indicator, same as a job with no deployment at
-  all (batch/system jobs, or service jobs without an `update` block).
+  header. A separate Deployment column shows an indicator for the job's most recent deployment: still in
+  progress ("Deploying for `<duration>`"), finished ("Deployed `<duration>` ago"), or failed/was cancelled
+  ("Failed `<duration>` ago"). The duration is omitted (bare "Deploying"/"Deployed"/"Failed") when it isn't
+  known. When it is known, hovering the indicator shows a tooltip with the same text plus the absolute
+  local timestamp it's measured from in parentheses, e.g. "Deploying for 2m 10s (9/30/2026 10:54:04am)".
+  No indicator at all for a job with no deployment (batch/system jobs, or service jobs without an `update`
+  block).
 - Sortable columns: Job, Status, Deployment, Submitted. Default sort is Submitted, descending.
 - URL query params: `q` (search), `sort`/`dir` (sort column/direction), `page`/`pageSize` (pagination).
 - Page updates periodically based on configuration (same refresh interval as the Job Status Page), so a
-  job's deployment indicator disappears once "deploying" finishes, without a manual reload.
+  job's deployment indicator (including its elapsed-time text) stays current without a manual reload.
 
 ## Job Status Page
 
 - Page title is "Job: `<job id>`", shown both as the browser tab title and as the page's H1 heading
   (alongside the running/stopped/etc. indicator described next).
 - Show indicator whether job status is currently running, stopped, etc., plus the same deployment
-  indicator as the Profile Page's Deployment column ("deploying"/"deploy failed"; no indicator for
-  "deployed" or no deployment) shown next to it.
+  indicator as the Profile Page's Deployment column shown next to it.
 - List the counts of allocations by version, then by status.
   - Status refers to running, stopped, etc.
   - Also shows last modified time of newest allocation in the group.
@@ -113,9 +115,8 @@ fields:
   - Default every 5 seconds.
 - A header toggle lets the user opt in to browser (OS-level) notifications for this job, off by default so
   no permission prompt appears unasked. Once enabled, a notification fires whenever the job's deployment
-  status changes (including into "deployed" — a rollout finishing is exactly what's worth notifying about,
-  even though the on-page badge itself stays silent for that state), regardless of whether the tab is
-  focused. The choice is remembered per-browser and scoped to whichever job page is currently open, not a
-  background watch across all jobs. The notification title is "Deployment `<job name>`"; the body is
-  "`<emoji>` `<job name>` `<deployment status>`", where the emoji indicates the new status: ✅ deployed,
-  🔄 deploying, ❌ failed.
+  status changes — including into "deployed", a rollout finishing being exactly what's worth notifying
+  about — regardless of whether the tab is focused. The choice is remembered per-browser and scoped to
+  whichever job page is currently open, not a background watch across all jobs. The notification title is
+  "Deployment `<job name>`"; the body is "`<emoji>` `<job name>` `<deployment status>`", where the emoji
+  indicates the new status: ✅ deployed, 🔄 deploying, ❌ failed.

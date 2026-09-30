@@ -35,7 +35,9 @@ type jobDef struct {
 func newStaticJob(id, name string, stop bool, status string, latestSubmit time.Time, versions []*nomadapi.Job, allocs []simAllocation, deploymentStatus string) jobDef {
 	var deployments func(time.Time) []*nomadapi.Deployment
 	if deploymentStatus != "" {
-		deployment := simDeployment(id, deploymentStatus, 1)
+		// The deployment is treated as having taken about a minute, finishing (successfully or not)
+		// around when the version itself was submitted — close enough for demo purposes.
+		deployment := simDeployment(id, deploymentStatus, 1, latestSubmit.Add(-time.Minute), latestSubmit)
 		deployments = func(time.Time) []*nomadapi.Deployment { return []*nomadapi.Deployment{deployment} }
 	}
 

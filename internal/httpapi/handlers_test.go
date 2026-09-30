@@ -148,6 +148,18 @@ func decodeJSON[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 	return v
 }
 
+// assertSameInstant parses got as RFC3339 and asserts it names the same
+// instant as want, regardless of which UTC offset each is expressed in
+// (time.Unix, which deploymentStatusSince is built from, uses the server's
+// local zone).
+func assertSameInstant(t *testing.T, want time.Time, got string) {
+	t.Helper()
+
+	parsed, err := time.Parse(time.RFC3339, got)
+	require.NoError(t, err, "parsing DeploymentStatusSince %q", got)
+	assert.True(t, want.Equal(parsed), "want %v, got %v", want, parsed)
+}
+
 func TestHandleListProfiles(t *testing.T) {
 	srv := NewServer(testConfig(), map[string]nomadclient.API{})
 
@@ -245,6 +257,8 @@ func TestHandleListJobsSortedNewestFirst(t *testing.T) {
 }
 
 func TestHandleListJobsStatusAndDeploymentStatus(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+
 	fake := &fakeNomad{
 		jobs: []*nomadapi.JobListStub{
 			{ID: "deploying-job", Name: "deploying-job", Status: "running"},
@@ -256,12 +270,13 @@ func TestHandleListJobsStatusAndDeploymentStatus(t *testing.T) {
 		deployments: []*nomadapi.Deployment{
 			// Superseded by the later CreateIndex entry below — must not win.
 			{JobID: "deploying-job", Status: "successful", CreateIndex: 1},
-			{JobID: "deploying-job", Status: "running", CreateIndex: 2},
-			{JobID: "deployed-job", Status: "successful", CreateIndex: 1},
+			{JobID: "deploying-job", Status: "running", CreateIndex: 2, CreateTime: now.Add(-5 * time.Minute).UnixNano()},
+			{JobID: "deployed-job", Status: "successful", CreateIndex: 1, ModifyTime: now.Add(-3 * time.Hour).UnixNano()},
 			{JobID: "failed-deploy-job", Status: "cancelled", CreateIndex: 1},
 		},
 	}
 	srv := NewServer(testConfig(), map[string]nomadclient.API{"prod-usw1": fake})
+	srv.now = func() time.Time { return now }
 
 	req := httptest.NewRequest(http.MethodGet, "/api/profiles/prod-usw1/jobs", nil)
 	rec := httptest.NewRecorder()
@@ -277,10 +292,23 @@ func TestHandleListJobsStatusAndDeploymentStatus(t *testing.T) {
 
 	assert.Equal(t, "running", byID["deploying-job"].Status)
 	assert.Equal(t, "deploying", byID["deploying-job"].DeploymentStatus, "latest deployment (by CreateIndex) wins")
+	require.NotNil(t, byID["deploying-job"].DeploymentElapsedSeconds)
+	assert.Equal(t, int64(5*60), *byID["deploying-job"].DeploymentElapsedSeconds, "deploying elapsed measured from CreateTime")
+	assertSameInstant(t, now.Add(-5*time.Minute), byID["deploying-job"].DeploymentStatusSince)
+
 	assert.Equal(t, "deployed", byID["deployed-job"].DeploymentStatus)
+	require.NotNil(t, byID["deployed-job"].DeploymentElapsedSeconds)
+	assert.Equal(t, int64(3*60*60), *byID["deployed-job"].DeploymentElapsedSeconds, "terminal elapsed measured from ModifyTime")
+	assertSameInstant(t, now.Add(-3*time.Hour), byID["deployed-job"].DeploymentStatusSince)
+
 	assert.Equal(t, "failed", byID["failed-deploy-job"].DeploymentStatus)
+	assert.Nil(t, byID["failed-deploy-job"].DeploymentElapsedSeconds, "no ModifyTime set, so elapsed is unknown")
+	assert.Equal(t, "", byID["failed-deploy-job"].DeploymentStatusSince)
+
 	assert.Equal(t, "stopped", byID["stopped-job"].Status, "Stop overrides the raw Nomad status")
 	assert.Equal(t, "", byID["no-deploy-job"].DeploymentStatus, "no deployment at all")
+	assert.Nil(t, byID["no-deploy-job"].DeploymentElapsedSeconds)
+	assert.Equal(t, "", byID["no-deploy-job"].DeploymentStatusSince)
 }
 
 func TestHandleListJobsNomadError(t *testing.T) {
@@ -380,7 +408,7 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 			},
 		},
 		deployments: []*nomadapi.Deployment{
-			{JobID: "web", Status: "running", CreateIndex: 1},
+			{JobID: "web", Status: "running", CreateIndex: 1, CreateTime: now.Add(-90 * time.Second).UnixNano()},
 			{JobID: "other-job", Status: "successful", CreateIndex: 99},
 		},
 	}
@@ -399,6 +427,9 @@ func TestHandleJobStatusHappyPath(t *testing.T) {
 	assert.Equal(t, "web", got.Job.ID)
 	assert.Equal(t, "running", got.Job.Status)
 	assert.Equal(t, "deploying", got.Job.DeploymentStatus, "scoped to this job's own deployment, not other-job's")
+	require.NotNil(t, got.Job.DeploymentElapsedSeconds)
+	assert.Equal(t, int64(90), *got.Job.DeploymentElapsedSeconds)
+	assertSameInstant(t, now.Add(-90*time.Second), got.Job.DeploymentStatusSince)
 
 	require.Len(t, got.VersionGroups, 1)
 	vg := got.VersionGroups[0]

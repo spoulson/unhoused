@@ -10,6 +10,10 @@
   color: var(--gb-bg0);
 }
 
+.deployed {
+  background: var(--gb-green);
+}
+
 .deploying {
   background: var(--gb-yellow);
 }

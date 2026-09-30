@@ -71,16 +71,19 @@ func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deploymentStatuses := latestDeploymentStatuses(deployments)
+	deploymentInfos := latestDeploymentInfo(deployments, s.now())
 
 	jobs := make([]jobListItemDTO, 0, len(stubs))
 	for _, stub := range stubs {
+		info := deploymentInfos[stub.ID]
 		jobs = append(jobs, jobListItemDTO{
-			ID:               stub.ID,
-			Name:             stub.Name,
-			SubmitTime:       time.Unix(0, stub.SubmitTime),
-			Status:           deriveJobListStatus(stub),
-			DeploymentStatus: deploymentStatuses[stub.ID],
+			ID:                       stub.ID,
+			Name:                     stub.Name,
+			SubmitTime:               time.Unix(0, stub.SubmitTime),
+			Status:                   deriveJobListStatus(stub),
+			DeploymentStatus:         info.Status,
+			DeploymentElapsedSeconds: deploymentElapsedSecondsPtr(info),
+			DeploymentStatusSince:    deploymentStatusSince(info),
 		})
 	}
 
@@ -254,12 +257,16 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jobDeploymentInfo := latestDeploymentInfo(deployments, now)[jobID]
+
 	writeJSON(w, http.StatusOK, jobStatusResponse{
 		Job: jobDTO{
-			ID:               stringVal(job.ID),
-			Name:             stringVal(job.Name),
-			Status:           deriveJobStatus(job),
-			DeploymentStatus: latestDeploymentStatuses(deployments)[jobID],
+			ID:                       stringVal(job.ID),
+			Name:                     stringVal(job.Name),
+			Status:                   deriveJobStatus(job),
+			DeploymentStatus:         jobDeploymentInfo.Status,
+			DeploymentElapsedSeconds: deploymentElapsedSecondsPtr(jobDeploymentInfo),
+			DeploymentStatusSince:    deploymentStatusSince(jobDeploymentInfo),
 		},
 		VersionGroups: versionGroups,
 		Pagination:    pagination,

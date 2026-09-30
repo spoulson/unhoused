@@ -98,13 +98,15 @@ func ptr[T any](v T) *T {
 }
 
 // simDeployment builds a minimal *nomadapi.Deployment carrying just the
-// fields internal/httpapi/derive.go's latestDeploymentStatuses reads
-// (JobID/Status/CreateIndex).
-func simDeployment(jobID, status string, createIndex uint64) *nomadapi.Deployment {
+// fields internal/httpapi/derive.go's latestDeploymentInfo reads
+// (JobID/Status/CreateIndex/CreateTime/ModifyTime).
+func simDeployment(jobID, status string, createIndex uint64, createTime, modifyTime time.Time) *nomadapi.Deployment {
 	return &nomadapi.Deployment{
 		JobID:       jobID,
 		Status:      status,
 		CreateIndex: createIndex,
+		CreateTime:  createTime.UnixNano(),
+		ModifyTime:  modifyTime.UnixNano(),
 	}
 }
 

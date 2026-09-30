@@ -121,10 +121,13 @@ func TestNewDeployingJobDeployments(t *testing.T) {
 	job := newDeployingJob(spec)
 
 	t.Run("mid rollout reports a running deployment", func(t *testing.T) {
-		deployments := job.deployments(epoch.Add(2 * time.Minute))
+		now := epoch.Add(2 * time.Minute)
+		deployments := job.deployments(now)
 		require.Len(t, deployments, 1)
 		assert.Equal(t, spec.id, deployments[0].JobID)
 		assert.Equal(t, "running", deployments[0].Status)
+		assert.Equal(t, epoch.UnixNano(), deployments[0].CreateTime, "CreateTime is when the current rollout began")
+		assert.Equal(t, now.UnixNano(), deployments[0].ModifyTime, "still in progress, so ModifyTime tracks now")
 	})
 
 	t.Run("idle period reports a successful deployment", func(t *testing.T) {
@@ -132,5 +135,7 @@ func TestNewDeployingJobDeployments(t *testing.T) {
 		require.Len(t, deployments, 1)
 		assert.Equal(t, spec.id, deployments[0].JobID)
 		assert.Equal(t, "successful", deployments[0].Status)
+		assert.Equal(t, epoch.UnixNano(), deployments[0].CreateTime)
+		assert.Equal(t, epoch.Add(deployRolloutDuration).UnixNano(), deployments[0].ModifyTime, "ModifyTime is when the rollout finished")
 	})
 }

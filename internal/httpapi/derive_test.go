@@ -77,19 +77,60 @@ func TestDeploymentStatusLabel(t *testing.T) {
 	}
 }
 
-func TestLatestDeploymentStatuses(t *testing.T) {
+func TestLatestDeploymentInfo(t *testing.T) {
+	now := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+
 	deployments := []*nomadapi.Deployment{
 		nil, // tolerated
-		{JobID: "web", Status: "successful", CreateIndex: 1},
-		{JobID: "web", Status: "running", CreateIndex: 2}, // newer — should win
-		{JobID: "worker", Status: "cancelled", CreateIndex: 5},
+		{JobID: "web", Status: "successful", CreateIndex: 1, CreateTime: now.Add(-2 * time.Hour).UnixNano(), ModifyTime: now.Add(-90 * time.Minute).UnixNano()},
+		{JobID: "web", Status: "running", CreateIndex: 2, CreateTime: now.Add(-5 * time.Minute).UnixNano(), ModifyTime: now.Add(-1 * time.Minute).UnixNano()}, // newer — should win
+		{JobID: "worker", Status: "cancelled", CreateIndex: 5, CreateTime: now.Add(-3 * time.Hour).UnixNano(), ModifyTime: now.Add(-45 * time.Minute).UnixNano()},
+		{JobID: "no-modify-time", Status: "successful", CreateIndex: 1, CreateTime: now.Add(-30 * time.Minute).UnixNano()},
+		{JobID: "no-timestamps", Status: "successful", CreateIndex: 1},
 	}
 
-	got := latestDeploymentStatuses(deployments)
+	got := latestDeploymentInfo(deployments, now)
 
-	assert.Equal(t, "deploying", got["web"], "the higher-CreateIndex deployment wins")
-	assert.Equal(t, "failed", got["worker"])
-	assert.NotContains(t, got, "no-such-job", "jobs with no deployment have no entry")
+	web := got["web"]
+	assert.Equal(t, "deploying", web.Status, "the higher-CreateIndex deployment wins")
+	assert.True(t, web.ElapsedKnown)
+	assert.Equal(t, int64(5*60), web.ElapsedSeconds, "deploying elapsed is always measured from CreateTime")
+
+	worker := got["worker"]
+	assert.Equal(t, "failed", worker.Status)
+	assert.True(t, worker.ElapsedKnown)
+	assert.Equal(t, int64(45*60), worker.ElapsedSeconds, "terminal elapsed prefers ModifyTime when set")
+
+	noModifyTime := got["no-modify-time"]
+	assert.Equal(t, "deployed", noModifyTime.Status)
+	assert.True(t, noModifyTime.ElapsedKnown)
+	assert.Equal(t, int64(30*60), noModifyTime.ElapsedSeconds, "terminal elapsed falls back to CreateTime when ModifyTime is unset")
+
+	noTimestamps := got["no-timestamps"]
+	assert.Equal(t, "deployed", noTimestamps.Status)
+	assert.False(t, noTimestamps.ElapsedKnown, "elapsed is unknown only when both CreateTime and ModifyTime are unset")
+
+	_, ok := got["no-such-job"]
+	assert.False(t, ok, "jobs with no deployment have no entry")
+}
+
+func TestDeploymentElapsedSecondsPtr(t *testing.T) {
+	known := deploymentElapsedSecondsPtr(deploymentInfo{ElapsedSeconds: 42, ElapsedKnown: true})
+	require.NotNil(t, known)
+	assert.Equal(t, int64(42), *known)
+
+	unknown := deploymentElapsedSecondsPtr(deploymentInfo{ElapsedKnown: false})
+	assert.Nil(t, unknown)
+}
+
+func TestDeploymentStatusSince(t *testing.T) {
+	since := time.Date(2026, 8, 12, 10, 30, 0, 0, time.UTC)
+
+	known := deploymentStatusSince(deploymentInfo{ElapsedKnown: true, Since: since})
+	assert.Equal(t, since.Format(time.RFC3339), known)
+
+	unknown := deploymentStatusSince(deploymentInfo{ElapsedKnown: false})
+	assert.Equal(t, "", unknown)
 }
 
 func TestLastModifiedSeconds(t *testing.T) {

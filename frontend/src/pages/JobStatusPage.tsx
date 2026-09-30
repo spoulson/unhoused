@@ -470,7 +470,11 @@ export function JobStatusPage() {
         {jobId}
         <span className={styles.statusBadge}>
           <StatusBadge status={data.job.status} />
-          <DeploymentBadge status={data.job.deploymentStatus} />
+          <DeploymentBadge
+            status={data.job.deploymentStatus}
+            elapsedSeconds={data.job.deploymentElapsedSeconds}
+            since={data.job.deploymentStatusSince}
+          />
         </span>
       </h1>
 

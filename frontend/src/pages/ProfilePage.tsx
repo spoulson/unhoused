@@ -286,7 +286,11 @@ export function ProfilePage() {
                         <StatusBadge status={job.status} />
                       </td>
                       <td>
-                        <DeploymentBadge status={job.deploymentStatus} />
+                        <DeploymentBadge
+                          status={job.deploymentStatus}
+                          elapsedSeconds={job.deploymentElapsedSeconds}
+                          since={job.deploymentStatusSince}
+                        />
                       </td>
                       <td>{new Date(job.submitTime).toLocaleString()}</td>
                     </tr>
