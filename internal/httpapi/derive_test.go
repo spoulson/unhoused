@@ -87,6 +87,14 @@ func TestLatestDeploymentInfo(t *testing.T) {
 		{JobID: "worker", Status: "cancelled", CreateIndex: 5, CreateTime: now.Add(-3 * time.Hour).UnixNano(), ModifyTime: now.Add(-45 * time.Minute).UnixNano()},
 		{JobID: "no-modify-time", Status: "successful", CreateIndex: 1, CreateTime: now.Add(-30 * time.Minute).UnixNano()},
 		{JobID: "no-timestamps", Status: "successful", CreateIndex: 1},
+		{JobID: "progress", Status: "running", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{
+			"web":    {DesiredTotal: 4, HealthyAllocs: 3},
+			"worker": {DesiredTotal: 2, HealthyAllocs: 0},
+			"nil":    nil,
+		}},
+		{JobID: "no-desired", Status: "running", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {}}},
+		{JobID: "over-healthy", Status: "running", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 2, HealthyAllocs: 3}}},
+		{JobID: "done", Status: "successful", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 2, HealthyAllocs: 2}}},
 	}
 
 	got := latestDeploymentInfo(deployments, now)
@@ -109,6 +117,14 @@ func TestLatestDeploymentInfo(t *testing.T) {
 	noTimestamps := got["no-timestamps"]
 	assert.Equal(t, "deployed", noTimestamps.Status)
 	assert.False(t, noTimestamps.ElapsedKnown, "elapsed is unknown only when both CreateTime and ModifyTime are unset")
+
+	require.NotNil(t, got["progress"].ProgressPercent)
+	assert.Equal(t, 50, *got["progress"].ProgressPercent, "healthy/desired is summed across task groups (3/6)")
+	assert.Nil(t, got["no-desired"].ProgressPercent, "unknown when no task group reports a desired total")
+	require.NotNil(t, got["over-healthy"].ProgressPercent)
+	assert.Equal(t, 100, *got["over-healthy"].ProgressPercent, "clamped to 100")
+	assert.Nil(t, got["done"].ProgressPercent, "only deploying jobs report progress")
+	assert.Nil(t, got["worker"].ProgressPercent)
 
 	_, ok := got["no-such-job"]
 	assert.False(t, ok, "jobs with no deployment have no entry")

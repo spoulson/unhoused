@@ -290,6 +290,7 @@ export function ProfilePage() {
                           status={job.deploymentStatus}
                           elapsedSeconds={job.deploymentElapsedSeconds}
                           since={job.deploymentStatusSince}
+                          progressPercent={job.deploymentProgressPercent}
                         />
                       </td>
                       <td>{new Date(job.submitTime).toLocaleString()}</td>

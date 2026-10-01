@@ -59,7 +59,8 @@ Response `200`:
       "status": "running",
       "deploymentStatus": "deployed",
       "deploymentElapsedSeconds": 1234,
-      "deploymentStatusSince": "2026-08-10T11:39:26-04:00"
+      "deploymentStatusSince": "2026-08-10T11:39:26-04:00",
+      "deploymentProgressPercent": null
     }
   ]
 }
@@ -79,6 +80,11 @@ Response `200`:
   or in the (effectively unreachable in practice) case where neither timestamp is set.
 - `deploymentStatusSince` is the RFC3339 instant `deploymentElapsedSeconds` is measured from — the same
   `CreateTime`/`ModifyTime` value described above. `""` whenever `deploymentElapsedSeconds` is `null`.
+- `deploymentProgressPercent` is how far along a `"deploying"` rollout is, as an integer 0–100: the
+  deployment's healthy allocations divided by its desired allocations, each summed across all of the
+  Nomad deployment's task groups (`TaskGroups[*].HealthyAllocs` / `DesiredTotal`), rounded down and
+  clamped to 100. Allocation-weighted, so a large group counts for more than a small one. `null` unless
+  `deploymentStatus` is `"deploying"` and Nomad reports a non-zero desired total.
 
 Errors: `404` if `{profile}` doesn't match a configured profile; `502` if the Nomad API call fails.
 
@@ -114,7 +120,8 @@ Response `200`:
     "status": "running",
     "deploymentStatus": "deployed",
     "deploymentElapsedSeconds": 1234,
-    "deploymentStatusSince": "2026-08-10T11:39:26-04:00"
+    "deploymentStatusSince": "2026-08-10T11:39:26-04:00",
+    "deploymentProgressPercent": null
   },
   "versionGroups": [
     {
@@ -161,6 +168,8 @@ Response `200`:
   `deploymentElapsedSeconds` above, scoped to this one job.
 - `job.deploymentStatusSince` is the same value as `GET /api/profiles/{profile}/jobs`'s
   `deploymentStatusSince` above, scoped to this one job.
+- `job.deploymentProgressPercent` is the same value as `GET /api/profiles/{profile}/jobs`'s
+  `deploymentProgressPercent` above, scoped to this one job.
 - `versionGroups` is sorted newest version first; `statusCounts` keys are the Nomad client statuses
   (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
   unaffected by the filter query parameters above — it represents overall job health, not the filtered

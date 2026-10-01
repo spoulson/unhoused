@@ -139,3 +139,29 @@ func TestNewDeployingJobDeployments(t *testing.T) {
 		assert.Equal(t, epoch.Add(deployRolloutDuration).UnixNano(), deployments[0].ModifyTime, "ModifyTime is when the rollout finished")
 	})
 }
+
+func TestDeployTaskGroupStates(t *testing.T) {
+	spec := testDeploySpec(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	// 2 replicas => slotDuration=2m30s, pendingPhase=30s.
+
+	cases := []struct {
+		name                    string
+		rolloutElapsed          time.Duration
+		wantPlaced, wantHealthy int
+	}{
+		{"rollout just started: slot 0 replacing", 0, 1, 0},
+		{"slot 0 healthy, slot 1 not started", 1 * time.Minute, 1, 1},
+		{"slot 1 replacing", 2*time.Minute + 30*time.Second, 2, 1},
+		{"rollout finished", deployRolloutDuration, 2, 2},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			state := deployTaskGroupStates(spec, c.rolloutElapsed)["web"]
+			require.NotNil(t, state)
+			assert.Equal(t, 2, state.DesiredTotal)
+			assert.Equal(t, c.wantPlaced, state.PlacedAllocs)
+			assert.Equal(t, c.wantHealthy, state.HealthyAllocs)
+		})
+	}
+}

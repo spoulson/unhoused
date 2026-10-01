@@ -22,6 +22,7 @@ export interface JobListItem {
   deploymentStatus: DeploymentStatus
   deploymentElapsedSeconds: number | null
   deploymentStatusSince: string
+  deploymentProgressPercent: number | null
 }
 
 export interface JobsResponse {
@@ -35,6 +36,7 @@ export interface Job {
   deploymentStatus: DeploymentStatus
   deploymentElapsedSeconds: number | null
   deploymentStatusSince: string
+  deploymentProgressPercent: number | null
 }
 
 export interface VersionGroup {

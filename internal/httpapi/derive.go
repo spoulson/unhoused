@@ -80,6 +80,32 @@ type deploymentInfo struct {
 	ElapsedSeconds int64
 	ElapsedKnown   bool
 	Since          time.Time
+
+	// ProgressPercent is the rollout's completion (0-100) while Status is
+	// "deploying"; nil when not deploying or when Nomad reports no desired
+	// allocations to measure against.
+	ProgressPercent *int
+}
+
+// deploymentProgressPercent computes a deployment's completion as the share
+// of desired allocations that are healthy, summed across all task groups
+// (allocation-weighted, not an average of per-group percentages), rounded
+// down and clamped to 0-100. Returns nil when no task group reports a
+// desired total.
+func deploymentProgressPercent(d *nomadapi.Deployment) *int {
+	var healthy, desired int
+	for _, state := range d.TaskGroups {
+		if state == nil {
+			continue
+		}
+		healthy += state.HealthyAllocs
+		desired += state.DesiredTotal
+	}
+	if desired <= 0 {
+		return nil
+	}
+	percent := min(max(healthy*100/desired, 0), 100)
+	return &percent
 }
 
 // latestDeploymentInfo builds a job ID -> deploymentInfo lookup from the
@@ -117,6 +143,9 @@ func latestDeploymentInfo(deployments []*nomadapi.Deployment, now time.Time) map
 		}
 
 		info := deploymentInfo{Status: status}
+		if status == "deploying" {
+			info.ProgressPercent = deploymentProgressPercent(d)
+		}
 		if timestamp != 0 {
 			since := time.Unix(0, timestamp)
 			info.ElapsedSeconds = lastModifiedSeconds(since, now)
