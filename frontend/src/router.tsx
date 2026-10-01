@@ -11,7 +11,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'profile/:profileSlug', element: <ProfilePage /> },
-      { path: 'profile/:profileSlug/jobs/:jobId', element: <JobStatusPage /> },
+      { path: 'profile/:profileSlug/job/:jobId', element: <JobStatusPage /> },
     ],
   },
 ])

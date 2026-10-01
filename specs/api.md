@@ -57,7 +57,9 @@ Response `200`:
       "name": "web",
       "submitTime": "2026-08-10T12:00:00Z",
       "status": "running",
-      "deploymentStatus": "deployed"
+      "deploymentStatus": "deployed",
+      "deploymentElapsedSeconds": 1234,
+      "deploymentStatusSince": "2026-08-10T11:39:26-04:00"
     }
   ]
 }
@@ -69,6 +71,14 @@ Response `200`:
   `CreateIndex` entry for the job): `"deployed"` (Nomad status `successful`), `"deploying"` (`running`,
   `paused`, `pending`, `blocked`, `unblocking`, `initializing`), or `"failed"` (`failed`, `cancelled`). `""`
   for jobs with no deployment at all — batch/system jobs, or service jobs without an `update` block.
+- `deploymentElapsedSeconds` is how long the deployment has been in that state: seconds since the Nomad
+  deployment's `CreateTime` (time since the rollout began) while `deploymentStatus` is `"deploying"`. Once
+  `"deployed"` or `"failed"`, it prefers the deployment's `ModifyTime` (time since it reached that terminal
+  state), falling back to `CreateTime` when `ModifyTime` isn't set — real Nomad servers don't always stamp
+  it on every status transition, while `CreateTime` is always set. `null` when `deploymentStatus` is `""`,
+  or in the (effectively unreachable in practice) case where neither timestamp is set.
+- `deploymentStatusSince` is the RFC3339 instant `deploymentElapsedSeconds` is measured from — the same
+  `CreateTime`/`ModifyTime` value described above. `""` whenever `deploymentElapsedSeconds` is `null`.
 
 Errors: `404` if `{profile}` doesn't match a configured profile; `502` if the Nomad API call fails.
 
@@ -98,7 +108,14 @@ Response `200`:
 
 ```json
 {
-  "job": { "id": "web", "name": "web", "status": "running", "deploymentStatus": "deployed" },
+  "job": {
+    "id": "web",
+    "name": "web",
+    "status": "running",
+    "deploymentStatus": "deployed",
+    "deploymentElapsedSeconds": 1234,
+    "deploymentStatusSince": "2026-08-10T11:39:26-04:00"
+  },
   "versionGroups": [
     {
       "version": 3,
@@ -140,6 +157,10 @@ Response `200`:
   `stopped`, or `dead`.
 - `job.deploymentStatus` is the same `"deployed"`/`"deploying"`/`"failed"`/`""` value as
   `GET /api/profiles/{profile}/jobs`'s `deploymentStatus` above, scoped to this one job.
+- `job.deploymentElapsedSeconds` is the same value as `GET /api/profiles/{profile}/jobs`'s
+  `deploymentElapsedSeconds` above, scoped to this one job.
+- `job.deploymentStatusSince` is the same value as `GET /api/profiles/{profile}/jobs`'s
+  `deploymentStatusSince` above, scoped to this one job.
 - `versionGroups` is sorted newest version first; `statusCounts` keys are the Nomad client statuses
   (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
   unaffected by the filter query parameters above — it represents overall job health, not the filtered

@@ -1,0 +1,28 @@
+.toggle {
+  background: none;
+  border: 1px solid var(--gb-bg3);
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gb-fg1);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  border-color: var(--gb-blue);
+  color: var(--gb-blue);
+}
+
+.toggle svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* Same slashed-bell icon as the plain "off" state, but dimmed — the browser has blocked notifications
+   outright, so toggling it won't actually turn them on the way a normal "off" state would. */
+.blocked {
+  opacity: 0.5;
+}

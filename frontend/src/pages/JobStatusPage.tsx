@@ -11,6 +11,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { VersionLabel } from '../components/VersionLabel'
 import { formatDuration } from '../lib/duration'
 import { statusColor } from '../lib/statusColors'
+import { useDeploymentNotifications } from '../lib/useDeploymentNotifications'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { formatVersionLabel } from '../lib/version'
 import styles from './JobStatusPage.module.css'
@@ -285,7 +286,7 @@ function PortAddresses({ ports }: { ports: Port[] }) {
 
 export function JobStatusPage() {
   const { profileSlug, jobId } = useParams<{ profileSlug: string; jobId: string }>()
-  const { autoRefreshPaused } = useOutletContext<JobStatusOutletContext>()
+  const { autoRefreshPaused, notificationsEnabled } = useOutletContext<JobStatusOutletContext>()
   const pageTitle = `Job: ${jobId ?? ''}`
   useDocumentTitle(pageTitle)
   const [, setSearchParams] = useSearchParams()
@@ -320,6 +321,8 @@ export function JobStatusPage() {
     },
     autoRefreshPaused,
   )
+
+  useDeploymentNotifications(notificationsEnabled, jobId ?? '', data?.job.name ?? '', data?.job.deploymentStatus)
 
   // Maps version -> {taggedTime, dockerImage} for the Version filter dropdown's labels, since
   // filterOptions.versions is just numbers; versionGroups (unaffected by pagination/filters) always covers
@@ -467,7 +470,11 @@ export function JobStatusPage() {
         {jobId}
         <span className={styles.statusBadge}>
           <StatusBadge status={data.job.status} />
-          <DeploymentBadge status={data.job.deploymentStatus} />
+          <DeploymentBadge
+            status={data.job.deploymentStatus}
+            elapsedSeconds={data.job.deploymentElapsedSeconds}
+            since={data.job.deploymentStatusSince}
+          />
         </span>
       </h1>
 

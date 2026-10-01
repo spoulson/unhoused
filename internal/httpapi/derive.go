@@ -69,12 +69,33 @@ func deploymentStatusLabel(nomadStatus string) string {
 	}
 }
 
-// latestDeploymentStatuses builds a job ID -> deployment status ("deployed"/
-// "deploying"/"failed") lookup from the cluster's deployments, keeping only
-// each job's most recent deployment (highest CreateIndex). Jobs with no
-// deployment at all (batch/system jobs, or service jobs without an update
-// block) have no entry, so callers reading a missing key get "" naturally.
-func latestDeploymentStatuses(deployments []*nomadapi.Deployment) map[string]string {
+// deploymentInfo is a job's derived deployment status plus how long it's been
+// in that state. ElapsedKnown is false when the deployment's relevant
+// timestamp isn't set, so callers can omit the duration rather than show a
+// nonsensical one. Since is the RFC3339 instant that ElapsedSeconds is
+// measured from (zero value when !ElapsedKnown), for callers that want to
+// show it as an absolute timestamp alongside the relative duration.
+type deploymentInfo struct {
+	Status         string
+	ElapsedSeconds int64
+	ElapsedKnown   bool
+	Since          time.Time
+}
+
+// latestDeploymentInfo builds a job ID -> deploymentInfo lookup from the
+// cluster's deployments, keeping only each job's most recent deployment
+// (highest CreateIndex). Jobs with no deployment at all (batch/system jobs,
+// or service jobs without an update block) have no entry, so callers reading
+// a missing key get a zero-value deploymentInfo ("" status) naturally.
+//
+// Elapsed time is ideally measured from the deployment's ModifyTime (when it
+// last changed, i.e. reached its current terminal state) once "deployed" or
+// "failed" — but real Nomad servers don't reliably stamp ModifyTime on every
+// status transition, so this falls back to CreateTime (when the rollout
+// began, always set) whenever ModifyTime is missing. "deploying" always uses
+// CreateTime outright, since ModifyTime wouldn't answer "how long has this
+// been rolling out?" even when present.
+func latestDeploymentInfo(deployments []*nomadapi.Deployment, now time.Time) map[string]deploymentInfo {
 	latest := make(map[string]*nomadapi.Deployment, len(deployments))
 	for _, d := range deployments {
 		if d == nil {
@@ -86,11 +107,45 @@ func latestDeploymentStatuses(deployments []*nomadapi.Deployment) map[string]str
 		}
 	}
 
-	statuses := make(map[string]string, len(latest))
+	infos := make(map[string]deploymentInfo, len(latest))
 	for jobID, d := range latest {
-		statuses[jobID] = deploymentStatusLabel(d.Status)
+		status := deploymentStatusLabel(d.Status)
+
+		timestamp := d.CreateTime
+		if status != "deploying" && d.ModifyTime != 0 {
+			timestamp = d.ModifyTime
+		}
+
+		info := deploymentInfo{Status: status}
+		if timestamp != 0 {
+			since := time.Unix(0, timestamp)
+			info.ElapsedSeconds = lastModifiedSeconds(since, now)
+			info.ElapsedKnown = true
+			info.Since = since
+		}
+		infos[jobID] = info
 	}
-	return statuses
+	return infos
+}
+
+// deploymentElapsedSecondsPtr returns a pointer to info's elapsed seconds, or
+// nil when it isn't known — encoded as JSON null, so the frontend can tell
+// "unknown" apart from "0 seconds ago".
+func deploymentElapsedSecondsPtr(info deploymentInfo) *int64 {
+	if !info.ElapsedKnown {
+		return nil
+	}
+	return &info.ElapsedSeconds
+}
+
+// deploymentStatusSince formats info.Since as RFC3339, or "" when it isn't
+// known — same "" convention as versionTaggedTimes, for the frontend to
+// render alongside the relative duration (e.g. in a tooltip).
+func deploymentStatusSince(info deploymentInfo) string {
+	if !info.ElapsedKnown {
+		return ""
+	}
+	return info.Since.Format(time.RFC3339)
 }
 
 // versionSubmitTimes builds a version -> SubmitTime lookup from the job's

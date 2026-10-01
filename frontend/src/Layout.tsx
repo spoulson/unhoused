@@ -4,11 +4,14 @@ import { fetchJSON } from './api/client'
 import { useProfiles } from './api/queries'
 import type { JobsResponse } from './api/types'
 import { AutoRefreshToggle } from './components/AutoRefreshToggle'
+import { NotificationToggle } from './components/NotificationToggle'
 import { ThemeToggle } from './components/ThemeToggle'
+import { useNotificationsEnabled } from './lib/useNotificationsEnabled'
 import styles from './Layout.module.css'
 
 export interface JobStatusOutletContext {
   autoRefreshPaused: boolean
+  notificationsEnabled: boolean
 }
 
 export function Layout() {
@@ -18,6 +21,8 @@ export function Layout() {
   const navigate = useNavigate()
   const [isSwitchingProfile, setIsSwitchingProfile] = useState(false)
   const [autoRefreshPaused, setAutoRefreshPaused] = useState(false)
+  const { enabled: notificationsEnabled, toggle: toggleNotifications, supported: notificationsSupported, blocked: notificationsBlocked } =
+    useNotificationsEnabled()
 
   // Each job visit starts with automatic updates running, regardless of whether a previous job was paused.
   // Adjusted during render (rather than in an effect) per React's "resetting state on prop change" pattern.
@@ -38,7 +43,7 @@ export function Layout() {
         try {
           const jobs = await fetchJSON<JobsResponse>(`/api/profiles/${encodeURIComponent(newProfileSlug)}/jobs`)
           if (jobs.jobs.some((job) => job.id === jobId)) {
-            navigate(`/profile/${newProfileSlug}/jobs/${jobId}`)
+            navigate(`/profile/${newProfileSlug}/job/${jobId}`)
             return
           }
         } catch {
@@ -114,13 +119,19 @@ export function Layout() {
         </nav>
         <div className={styles.headerActions}>
           {jobId && <AutoRefreshToggle paused={autoRefreshPaused} onToggle={() => setAutoRefreshPaused((p) => !p)} />}
+          {jobId && notificationsSupported && (
+            <NotificationToggle enabled={notificationsEnabled} blocked={notificationsBlocked} onToggle={toggleNotifications} />
+          )}
           <ThemeToggle />
         </div>
       </header>
       <main className={styles.main}>
         {/* Keyed by profile/job so switching either fully remounts the page instead of a stale
             previous profile's data lingering via useJobStatus's keepPreviousData. */}
-        <Outlet key={`${profileSlug ?? ''}/${jobId ?? ''}`} context={{ autoRefreshPaused } satisfies JobStatusOutletContext} />
+        <Outlet
+          key={`${profileSlug ?? ''}/${jobId ?? ''}`}
+          context={{ autoRefreshPaused, notificationsEnabled } satisfies JobStatusOutletContext}
+        />
       </main>
     </div>
   )

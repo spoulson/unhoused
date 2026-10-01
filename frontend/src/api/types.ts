@@ -20,6 +20,8 @@ export interface JobListItem {
   submitTime: string
   status: JobStatus
   deploymentStatus: DeploymentStatus
+  deploymentElapsedSeconds: number | null
+  deploymentStatusSince: string
 }
 
 export interface JobsResponse {
@@ -31,6 +33,8 @@ export interface Job {
   name: string
   status: JobStatus
   deploymentStatus: DeploymentStatus
+  deploymentElapsedSeconds: number | null
+  deploymentStatusSince: string
 }
 
 export interface VersionGroup {

@@ -10,10 +10,20 @@
   color: var(--gb-bg0);
 }
 
+.deployed {
+  background: var(--gb-green);
+}
+
 .deploying {
   background: var(--gb-yellow);
 }
 
 .failed {
   background: var(--gb-red);
+}
+
+.spinner {
+  display: block;
+  width: 1em;
+  height: 1em;
 }
