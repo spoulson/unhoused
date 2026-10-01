@@ -14,4 +14,7 @@
 - The deployment status badge's "deploying" icon is an animated circular-arrow spinner (GIF, since
   it has no live `currentColor` equivalent), colored per theme to match the badge text color
   (`frontend/public/icons/deploying-spinner-{light,dark}.gif`).
+- The "deploying" badge doubles as a progress bar: a hard-stop left-to-right gradient driven by the
+  `--progress` custom property, `--gb-yellow` for the completed area and `--gb-yellow-dim` (a darker
+  yellow defined per theme) for the remainder.
 

@@ -47,14 +47,19 @@ export function deploymentStatusBadgeText(status: Exclude<DeploymentStatus, ''>,
 /**
  * Tooltip text for a deployment status badge: the badge text (deploymentStatusBadgeText) plus, when the
  * duration is known, the absolute local timestamp it's measured from in parentheses, e.g.
- * "Deploying for 2m 10s (9/30/2026 10:54:04am)".
+ * "Deploying for 2m 10s (9/30/2026 10:54:04am)". While deploying with a known progressPercent, the
+ * percentage follows the duration: "Deploying for 2m 10s, 60% complete (9/30/2026 10:54:04am)".
  */
 export function deploymentStatusTooltip(
   status: Exclude<DeploymentStatus, ''>,
   elapsedSeconds: number | null,
   since: string,
+  progressPercent: number | null = null,
 ): string {
-  const text = deploymentStatusBadgeText(status, elapsedSeconds)
+  let text = deploymentStatusBadgeText(status, elapsedSeconds)
+  if (status === 'deploying' && progressPercent !== null) {
+    text = `${text}, ${progressPercent}% complete`
+  }
   if (elapsedSeconds === null || since === '') {
     return text
   }

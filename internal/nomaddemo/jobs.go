@@ -37,7 +37,7 @@ func newStaticJob(id, name string, stop bool, status string, latestSubmit time.T
 	if deploymentStatus != "" {
 		// The deployment is treated as having taken about a minute, finishing (successfully or not)
 		// around when the version itself was submitted — close enough for demo purposes.
-		deployment := simDeployment(id, deploymentStatus, 1, latestSubmit.Add(-time.Minute), latestSubmit)
+		deployment := simDeployment(id, deploymentStatus, 1, latestSubmit.Add(-time.Minute), latestSubmit, nil)
 		deployments = func(time.Time) []*nomadapi.Deployment { return []*nomadapi.Deployment{deployment} }
 	}
 

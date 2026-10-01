@@ -73,7 +73,7 @@ func newDeployingJob(spec deployJobSpec) jobDef {
 				modifyTime = now
 			}
 
-			return []*nomadapi.Deployment{simDeployment(spec.id, status, newVersion, createTime, modifyTime)}
+			return []*nomadapi.Deployment{simDeployment(spec.id, status, newVersion, createTime, modifyTime, deployTaskGroupStates(spec, rolloutElapsed))}
 		},
 	}
 }
@@ -120,6 +120,53 @@ func deployJobVersionEntry(spec deployJobSpec, v uint64) *nomadapi.Job {
 	return jobVersion(spec.id, spec.name, v, deployVersionSubmitTime(spec, v), taskGroups, deployVersionDockerImage(spec, v), nil)
 }
 
+// deploySlotPhase is where one task-group slot is in its replacement.
+type deploySlotPhase int
+
+const (
+	slotNotStarted deploySlotPhase = iota // still fully on the old version
+	slotReplacing                         // new allocation pending, old one draining
+	slotReplaced                          // new allocation healthy, old one complete
+)
+
+// deploySlotPhaseAt classifies a slot from how long ago its replacement
+// window opened (negative = hasn't opened yet) and the pending sub-window.
+func deploySlotPhaseAt(slotElapsed, pendingPhase time.Duration) deploySlotPhase {
+	switch {
+	case slotElapsed < 0:
+		return slotNotStarted
+	case slotElapsed < pendingPhase:
+		return slotReplacing
+	default:
+		return slotReplaced
+	}
+}
+
+// deployTaskGroupStates reports each task group's rollout progress the way
+// Nomad's Deployment.TaskGroups does: every replica is desired, those whose
+// replacement has begun are placed, and those whose replacement has
+// finished are healthy. Mirrors the slot timing in deployAllocations.
+func deployTaskGroupStates(spec deployJobSpec, rolloutElapsed time.Duration) map[string]*nomadapi.DeploymentState {
+	states := make(map[string]*nomadapi.DeploymentState, len(spec.taskGroups))
+	for _, tg := range spec.taskGroups {
+		slotDuration := deployRolloutDuration / time.Duration(tg.replicas)
+		pendingPhase := time.Duration(float64(slotDuration) * deployPendingFraction)
+
+		state := &nomadapi.DeploymentState{DesiredTotal: tg.replicas}
+		for slot := range tg.replicas {
+			switch deploySlotPhaseAt(rolloutElapsed-time.Duration(slot)*slotDuration, pendingPhase) {
+			case slotReplacing:
+				state.PlacedAllocs++
+			case slotReplaced:
+				state.PlacedAllocs++
+				state.HealthyAllocs++
+			}
+		}
+		states[tg.name] = state
+	}
+	return states
+}
+
 // deployAllocations computes every allocation currently in play for spec at
 // now, across all of its task groups. Each task group replaces its replicas
 // one "slot" at a time over deployRolloutDuration; a slot that hasn't
@@ -152,17 +199,17 @@ func deployAllocations(spec deployJobSpec, now time.Time) []simAllocation {
 				ports: buildPorts(newID, node, tg.portLabels),
 			}
 
-			switch {
-			case slotElapsed < 0:
+			switch deploySlotPhaseAt(slotElapsed, pendingPhase) {
+			case slotNotStarted:
 				// Not this slot's turn yet: still fully on the old version.
 				oldAlloc.clientStatus, oldAlloc.desiredStatus = "running", "run"
 				allocs = append(allocs, oldAlloc)
-			case slotElapsed < pendingPhase:
+			case slotReplacing:
 				// Mid-replacement: new allocation starting up, old one draining.
 				oldAlloc.clientStatus, oldAlloc.desiredStatus = "running", "stop"
 				newAlloc.clientStatus, newAlloc.desiredStatus = "pending", "run"
 				allocs = append(allocs, oldAlloc, newAlloc)
-			default:
+			case slotReplaced:
 				// Replacement finished: new allocation healthy, old one complete.
 				oldAlloc.clientStatus, oldAlloc.desiredStatus = "complete", "stop"
 				newAlloc.clientStatus, newAlloc.desiredStatus = "running", "run"

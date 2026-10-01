@@ -474,6 +474,7 @@ export function JobStatusPage() {
             status={data.job.deploymentStatus}
             elapsedSeconds={data.job.deploymentElapsedSeconds}
             since={data.job.deploymentStatusSince}
+            progressPercent={data.job.deploymentProgressPercent}
           />
         </span>
       </h1>

@@ -14,8 +14,18 @@
   background: var(--gb-green);
 }
 
+/* Progress bar: --progress (set inline by DeploymentBadge) is the completed share, filled left to
+   right. Registered as a <percentage> so it can transition between refreshes; the 100% initial value
+   renders unknown progress as the plain solid yellow. */
+@property --progress {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
 .deploying {
-  background: var(--gb-yellow);
+  background: linear-gradient(to right, var(--gb-yellow) var(--progress), var(--gb-yellow-dim) var(--progress));
+  transition: --progress 0.6s ease;
 }
 
 .failed {

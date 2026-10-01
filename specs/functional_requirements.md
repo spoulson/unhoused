@@ -54,6 +54,11 @@ its specific fields/columns, and its defaults — this section describes the sha
   ("Failed `<duration>` ago"). The duration is omitted (bare "Deploying"/"Deployed"/"Failed") when it isn't
   known. When it is known, hovering the indicator shows a tooltip with the same text plus the absolute
   local timestamp it's measured from in parentheses, e.g. "Deploying for 2m 10s (9/30/2026 10:54:04am)".
+  While deploying, the badge's yellow background is also a left-to-right progress bar showing the
+  rollout's completion (healthy allocations out of desired): the completed area in normal yellow, the
+  remainder in a darker yellow, with the text and spinner staying readable on top. The tooltip adds the
+  percentage after the duration, e.g. "Deploying for 2m 10s, 60% complete (9/30/2026 10:54:04am)". With no
+  known progress the badge is solid yellow.
   No indicator at all for a job with no deployment (batch/system jobs, or service jobs without an `update`
   block).
 - Sortable columns: Job, Status, Deployment, Submitted. Default sort is Submitted, descending.

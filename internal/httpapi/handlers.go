@@ -77,13 +77,14 @@ func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
 	for _, stub := range stubs {
 		info := deploymentInfos[stub.ID]
 		jobs = append(jobs, jobListItemDTO{
-			ID:                       stub.ID,
-			Name:                     stub.Name,
-			SubmitTime:               time.Unix(0, stub.SubmitTime),
-			Status:                   deriveJobListStatus(stub),
-			DeploymentStatus:         info.Status,
-			DeploymentElapsedSeconds: deploymentElapsedSecondsPtr(info),
-			DeploymentStatusSince:    deploymentStatusSince(info),
+			ID:                        stub.ID,
+			Name:                      stub.Name,
+			SubmitTime:                time.Unix(0, stub.SubmitTime),
+			Status:                    deriveJobListStatus(stub),
+			DeploymentStatus:          info.Status,
+			DeploymentElapsedSeconds:  deploymentElapsedSecondsPtr(info),
+			DeploymentStatusSince:     deploymentStatusSince(info),
+			DeploymentProgressPercent: info.ProgressPercent,
 		})
 	}
 
@@ -261,12 +262,13 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, jobStatusResponse{
 		Job: jobDTO{
-			ID:                       stringVal(job.ID),
-			Name:                     stringVal(job.Name),
-			Status:                   deriveJobStatus(job),
-			DeploymentStatus:         jobDeploymentInfo.Status,
-			DeploymentElapsedSeconds: deploymentElapsedSecondsPtr(jobDeploymentInfo),
-			DeploymentStatusSince:    deploymentStatusSince(jobDeploymentInfo),
+			ID:                        stringVal(job.ID),
+			Name:                      stringVal(job.Name),
+			Status:                    deriveJobStatus(job),
+			DeploymentStatus:          jobDeploymentInfo.Status,
+			DeploymentElapsedSeconds:  deploymentElapsedSecondsPtr(jobDeploymentInfo),
+			DeploymentStatusSince:     deploymentStatusSince(jobDeploymentInfo),
+			DeploymentProgressPercent: jobDeploymentInfo.ProgressPercent,
 		},
 		VersionGroups: versionGroups,
 		Pagination:    pagination,

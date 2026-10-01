@@ -21,13 +21,14 @@ type profilesResponse struct {
 }
 
 type jobListItemDTO struct {
-	ID                       string    `json:"id"`
-	Name                     string    `json:"name"`
-	SubmitTime               time.Time `json:"submitTime"`
-	Status                   string    `json:"status"`
-	DeploymentStatus         string    `json:"deploymentStatus"`
-	DeploymentElapsedSeconds *int64    `json:"deploymentElapsedSeconds"`
-	DeploymentStatusSince    string    `json:"deploymentStatusSince"`
+	ID                        string    `json:"id"`
+	Name                      string    `json:"name"`
+	SubmitTime                time.Time `json:"submitTime"`
+	Status                    string    `json:"status"`
+	DeploymentStatus          string    `json:"deploymentStatus"`
+	DeploymentElapsedSeconds  *int64    `json:"deploymentElapsedSeconds"`
+	DeploymentStatusSince     string    `json:"deploymentStatusSince"`
+	DeploymentProgressPercent *int      `json:"deploymentProgressPercent"`
 }
 
 type jobsResponse struct {
@@ -35,12 +36,13 @@ type jobsResponse struct {
 }
 
 type jobDTO struct {
-	ID                       string `json:"id"`
-	Name                     string `json:"name"`
-	Status                   string `json:"status"`
-	DeploymentStatus         string `json:"deploymentStatus"`
-	DeploymentElapsedSeconds *int64 `json:"deploymentElapsedSeconds"`
-	DeploymentStatusSince    string `json:"deploymentStatusSince"`
+	ID                        string `json:"id"`
+	Name                      string `json:"name"`
+	Status                    string `json:"status"`
+	DeploymentStatus          string `json:"deploymentStatus"`
+	DeploymentElapsedSeconds  *int64 `json:"deploymentElapsedSeconds"`
+	DeploymentStatusSince     string `json:"deploymentStatusSince"`
+	DeploymentProgressPercent *int   `json:"deploymentProgressPercent"`
 }
 
 type versionGroupDTO struct {
