@@ -37,6 +37,7 @@ export interface Job {
   deploymentElapsedSeconds: number | null
   deploymentStatusSince: string
   deploymentProgressPercent: number | null
+  deploymentCanary: boolean
 }
 
 export interface VersionGroup {
@@ -45,6 +46,7 @@ export interface VersionGroup {
   taggedTime: string
   newestAllocationLastModifiedSeconds: number
   statusCounts: Record<ClientStatus, number>
+  canary: boolean
 }
 
 export interface Port {
@@ -66,6 +68,7 @@ export interface Allocation {
   dockerImage: string
   taggedTime: string
   lastModifiedSeconds: number
+  canary: boolean
   ports: Port[]
 }
 

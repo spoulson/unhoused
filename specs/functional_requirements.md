@@ -71,8 +71,11 @@ its specific fields/columns, and its defaults — this section describes the sha
 - Page title is "Job: `<job id>`", shown both as the browser tab title and as the page's H1 heading
   (alongside the running/stopped/etc. indicator described next).
 - Show indicator whether job status is currently running, stopped, etc., plus the same deployment
-  indicator as the Profile Page's Deployment column shown next to it.
+  indicator as the Profile Page's Deployment column shown next to it. While the deployment in progress is
+  a canary rollout, the indicator also carries a "Canary" tag.
 - List the counts of allocations by version, then by status.
+  - While a canary deployment is in progress, the canary version's header and each of its allocations in
+    the Allocations table carry a "Canary" tag.
   - Status refers to running, stopped, etc.
   - Also shows last modified time of newest allocation in the group.
   - The version list uses the same pagination control described above (Previous/Next, adjustable page

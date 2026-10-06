@@ -94,6 +94,8 @@ func TestLatestDeploymentInfo(t *testing.T) {
 		}},
 		{JobID: "no-desired", Status: "running", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {}}},
 		{JobID: "over-healthy", Status: "running", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 2, HealthyAllocs: 3}}},
+		{JobID: "canary", Status: "running", CreateIndex: 1, JobVersion: 7, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 4, DesiredCanaries: 1}}},
+		{JobID: "canary-done", Status: "successful", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 4, DesiredCanaries: 1}}},
 		{JobID: "done", Status: "successful", CreateIndex: 1, TaskGroups: map[string]*nomadapi.DeploymentState{"web": {DesiredTotal: 2, HealthyAllocs: 2}}},
 	}
 
@@ -125,6 +127,10 @@ func TestLatestDeploymentInfo(t *testing.T) {
 	assert.Equal(t, 100, *got["over-healthy"].ProgressPercent, "clamped to 100")
 	assert.Nil(t, got["done"].ProgressPercent, "only deploying jobs report progress")
 	assert.Nil(t, got["worker"].ProgressPercent)
+	assert.True(t, got["canary"].Canary, "a running deployment with desired canaries is a canary")
+	assert.Equal(t, uint64(7), got["canary"].CanaryVersion)
+	assert.False(t, got["canary-done"].Canary, "only in-progress deployments report canary")
+	assert.False(t, got["progress"].Canary)
 
 	_, ok := got["no-such-job"]
 	assert.False(t, ok, "jobs with no deployment have no entry")
