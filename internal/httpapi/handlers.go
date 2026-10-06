@@ -166,6 +166,14 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	versionGroups := groupByVersion(allocStubs, submitTimes, images, taggedTimes, now)
 	filterOptions := allocationFilterOptions(allocStubs)
 
+	jobDeploymentInfo := latestDeploymentInfo(deployments, now)[jobID]
+	isCanaryVersion := func(version uint64) bool {
+		return jobDeploymentInfo.Canary && jobDeploymentInfo.CanaryVersion == version
+	}
+	for i := range versionGroups {
+		versionGroups[i].Canary = isCanaryVersion(versionGroups[i].Version)
+	}
+
 	query := r.URL.Query()
 	filters := allocationFilters{
 		Search:    query.Get("q"),
@@ -244,6 +252,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 				DockerImage:         images[stub.JobVersion],
 				TaggedTime:          taggedTimes[stub.JobVersion],
 				LastModifiedSeconds: lastModifiedSeconds(submitTimes[stub.JobVersion], now),
+				Canary:              isCanaryVersion(stub.JobVersion),
 				Ports:               ports,
 			}
 
@@ -258,8 +267,6 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobDeploymentInfo := latestDeploymentInfo(deployments, now)[jobID]
-
 	writeJSON(w, http.StatusOK, jobStatusResponse{
 		Job: jobDTO{
 			ID:                        stringVal(job.ID),
@@ -269,6 +276,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 			DeploymentElapsedSeconds:  deploymentElapsedSecondsPtr(jobDeploymentInfo),
 			DeploymentStatusSince:     deploymentStatusSince(jobDeploymentInfo),
 			DeploymentProgressPercent: jobDeploymentInfo.ProgressPercent,
+			DeploymentCanary:          jobDeploymentInfo.Canary,
 		},
 		VersionGroups: versionGroups,
 		Pagination:    pagination,

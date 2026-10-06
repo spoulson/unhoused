@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import type { DeploymentStatus } from '../api/types'
 import { deploymentStatusBadgeText, deploymentStatusTooltip } from '../lib/deploymentStatus'
 import { useTheme } from '../theme/ThemeContext'
+import { CanaryTag } from './CanaryTag'
 import styles from './DeploymentBadge.module.css'
 
 type KnownStatus = Exclude<DeploymentStatus, ''>
@@ -28,6 +29,7 @@ interface DeploymentBadgeProps {
   elapsedSeconds: number | null
   since: string
   progressPercent: number | null
+  canary?: boolean
 }
 
 // Shown next to the job status badge (Profile Page's Deployment column, and the Job Status Page's
@@ -36,9 +38,10 @@ interface DeploymentBadgeProps {
 // local timestamp the duration is measured from, e.g. "Deploying for 2m 10s (9/30/2026 10:54:04am)".
 // While deploying, the badge's yellow background doubles as a left-to-right progress bar (completed
 // area --gb-yellow, remaining area --gb-yellow-dim), and the tooltip adds "N% complete".
+// With `canary` (Job Status Page only), a "Canary" tag follows the text while deploying.
 // Renders nothing for jobs with no deployment at all (batch/system jobs, or service jobs without an
 // `update` block) — see specs/api.md.
-export function DeploymentBadge({ status, elapsedSeconds, since, progressPercent }: DeploymentBadgeProps) {
+export function DeploymentBadge({ status, elapsedSeconds, since, progressPercent, canary = false }: DeploymentBadgeProps) {
   const { theme } = useTheme()
 
   if (!isKnownStatus(status)) {
@@ -62,6 +65,7 @@ export function DeploymentBadge({ status, elapsedSeconds, since, progressPercent
         <span aria-hidden="true">{ICONS[status]}</span>
       )}
       {deploymentStatusBadgeText(status, elapsedSeconds)}
+      {canary && status === 'deploying' && <CanaryTag />}
     </span>
   )
 }

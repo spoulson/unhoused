@@ -4,6 +4,7 @@ import type { JobStatusOutletContext } from '../Layout'
 import { useJobStatus } from '../api/queries'
 import type { ClientStatus, Port } from '../api/types'
 import { CopyButton } from '../components/CopyButton'
+import { CanaryTag } from '../components/CanaryTag'
 import { DeploymentBadge } from '../components/DeploymentBadge'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -475,6 +476,7 @@ export function JobStatusPage() {
             elapsedSeconds={data.job.deploymentElapsedSeconds}
             since={data.job.deploymentStatusSince}
             progressPercent={data.job.deploymentProgressPercent}
+            canary={data.job.deploymentCanary}
           />
         </span>
       </h1>
@@ -525,6 +527,7 @@ export function JobStatusPage() {
               <div className={styles.versionHeader}>
                 <span>
                   Version <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
+                  {group.canary && <CanaryTag />}
                 </span>
                 <span className={styles.lastModified}>
                   last modified {formatDuration(group.newestAllocationLastModifiedSeconds)}
@@ -654,6 +657,7 @@ export function JobStatusPage() {
                       <td>{alloc.taskGroup}</td>
                       <td>
                         <VersionLabel version={alloc.version} taggedTime={alloc.taggedTime} dockerImage={alloc.dockerImage} />
+                        {alloc.canary && <CanaryTag />}
                       </td>
                       <td>{formatDuration(alloc.lastModifiedSeconds)}</td>
                       <td>

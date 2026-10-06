@@ -85,6 +85,24 @@ type deploymentInfo struct {
 	// "deploying"; nil when not deploying or when Nomad reports no desired
 	// allocations to measure against.
 	ProgressPercent *int
+
+	// Canary is true while Status is "deploying" and the rollout is a canary
+	// deployment (any task group has desired canaries).
+	Canary bool
+
+	// CanaryVersion is the job version being rolled out when Canary is true.
+	CanaryVersion uint64
+}
+
+// deploymentIsCanary reports whether d is a canary deployment: any task
+// group asks for at least one canary allocation.
+func deploymentIsCanary(d *nomadapi.Deployment) bool {
+	for _, state := range d.TaskGroups {
+		if state != nil && state.DesiredCanaries > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // deploymentProgressPercent computes a deployment's completion as the share
@@ -145,6 +163,8 @@ func latestDeploymentInfo(deployments []*nomadapi.Deployment, now time.Time) map
 		info := deploymentInfo{Status: status}
 		if status == "deploying" {
 			info.ProgressPercent = deploymentProgressPercent(d)
+			info.Canary = deploymentIsCanary(d)
+			info.CanaryVersion = d.JobVersion
 		}
 		if timestamp != 0 {
 			since := time.Unix(0, timestamp)

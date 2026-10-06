@@ -170,6 +170,11 @@ Response `200`:
   `deploymentStatusSince` above, scoped to this one job.
 - `job.deploymentProgressPercent` is the same value as `GET /api/profiles/{profile}/jobs`'s
   `deploymentProgressPercent` above, scoped to this one job.
+- `job.deploymentCanary` is `true` while `job.deploymentStatus` is `"deploying"` and the deployment is a
+  canary rollout (any Nomad task group has `DesiredCanaries` > 0); `false` otherwise.
+- `versionGroups[].canary` and `allocations[].canary` are `true` for the version being rolled out (and
+  its allocations) while `job.deploymentCanary` is `true`: the job version of the job's latest Nomad
+  deployment. `false` otherwise.
 - `versionGroups` is sorted newest version first; `statusCounts` keys are the Nomad client statuses
   (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
   unaffected by the filter query parameters above — it represents overall job health, not the filtered

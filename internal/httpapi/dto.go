@@ -43,6 +43,7 @@ type jobDTO struct {
 	DeploymentElapsedSeconds  *int64 `json:"deploymentElapsedSeconds"`
 	DeploymentStatusSince     string `json:"deploymentStatusSince"`
 	DeploymentProgressPercent *int   `json:"deploymentProgressPercent"`
+	DeploymentCanary          bool   `json:"deploymentCanary"`
 }
 
 type versionGroupDTO struct {
@@ -51,6 +52,7 @@ type versionGroupDTO struct {
 	TaggedTime                          string         `json:"taggedTime"`
 	NewestAllocationLastModifiedSeconds int64          `json:"newestAllocationLastModifiedSeconds"`
 	StatusCounts                        map[string]int `json:"statusCounts"`
+	Canary                              bool           `json:"canary"`
 }
 
 type portDTO struct {
@@ -72,6 +74,7 @@ type allocationDTO struct {
 	DockerImage         string    `json:"dockerImage"`
 	TaggedTime          string    `json:"taggedTime"`
 	LastModifiedSeconds int64     `json:"lastModifiedSeconds"`
+	Canary              bool      `json:"canary"`
 	Ports               []portDTO `json:"ports"`
 }
 
