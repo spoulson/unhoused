@@ -22,8 +22,14 @@ make docker
 docker compose up
 ```
 
-Open `http://localhost:8080`. This builds and runs the backend, frontend, and a Caddy reverse proxy together, using
-`config.yaml` as the backend's config.
+This builds and runs the backend, frontend, and a Caddy reverse proxy together, using `config.yaml` as the backend's
+config.
+
+Then browse to `http://localhost:9000`.
+
+`docker compose down` stops and removes the containers.
+
+### Running locally dev mode
 
 For live-reloading local iteration (source edits apply without a rebuild):
 
@@ -31,9 +37,7 @@ For live-reloading local iteration (source edits apply without a rebuild):
 make dev
 ```
 
-`docker compose down` stops and removes the containers.
-
-### Running locally without Docker
+### Running locally dev mode without Docker
 
 Backend (repo root) — set up a config file first, see [Configuration](#configuration) below, then:
 
