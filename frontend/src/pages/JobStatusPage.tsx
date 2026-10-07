@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import type { JobStatusOutletContext } from '../Layout'
-import { useJobStatus } from '../api/queries'
+import { useJobStatus, useProfiles } from '../api/queries'
 import type { ClientStatus, Port } from '../api/types'
 import { CopyButton } from '../components/CopyButton'
 import { CanaryTag } from '../components/CanaryTag'
@@ -288,8 +288,9 @@ function PortAddresses({ ports }: { ports: Port[] }) {
 export function JobStatusPage() {
   const { profileSlug, jobId } = useParams<{ profileSlug: string; jobId: string }>()
   const { autoRefreshPaused, notificationsEnabled } = useOutletContext<JobStatusOutletContext>()
-  const pageTitle = `Job: ${jobId ?? ''}`
-  useDocumentTitle(pageTitle)
+  const { data: profiles } = useProfiles()
+  const profileName = profiles?.profiles.find((p) => p.slug === profileSlug)?.name ?? profileSlug
+  useDocumentTitle(`Job: ${jobId ?? ''}${profileName ? ` (${profileName})` : ''}`)
   const [, setSearchParams] = useSearchParams()
 
   // filters/page/pageSize live in local state (initialized once from the URL on mount) rather than being

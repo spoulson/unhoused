@@ -68,8 +68,8 @@ its specific fields/columns, and its defaults — this section describes the sha
 
 ## Job Status Page
 
-- Page title is "Job: `<job id>`", shown both as the browser tab title and as the page's H1 heading
-  (alongside the running/stopped/etc. indicator described next).
+- Page title is "Job: `<job id>`", shown as the page's H1 heading (alongside the running/stopped/etc.
+  indicator described next). The browser tab title is "Job: `<job id>` (`<profile name>`)".
 - Show indicator whether job status is currently running, stopped, etc., plus the same deployment
   indicator as the Profile Page's Deployment column shown next to it. While the deployment in progress is
   a canary rollout, the indicator also carries a "Canary" tag.
