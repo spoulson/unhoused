@@ -52,6 +52,7 @@ type versionGroupDTO struct {
 	TaggedTime                          string         `json:"taggedTime"`
 	NewestAllocationLastModifiedSeconds int64          `json:"newestAllocationLastModifiedSeconds"`
 	StatusCounts                        map[string]int `json:"statusCounts"`
+	TaskGroupCounts                     map[string]int `json:"taskGroupCounts"`
 	Canary                              bool           `json:"canary"`
 }
 
@@ -91,9 +92,15 @@ type filterOptionsDTO struct {
 	Nodes      []string `json:"nodes"`
 }
 
+type taskGroupDTO struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
 type jobStatusResponse struct {
 	Job           jobDTO            `json:"job"`
 	VersionGroups []versionGroupDTO `json:"versionGroups"`
+	TaskGroups    []taskGroupDTO    `json:"taskGroups"`
 	Pagination    paginationDTO     `json:"pagination"`
 	FilterOptions filterOptionsDTO  `json:"filterOptions"`
 	Allocations   []allocationDTO   `json:"allocations"`

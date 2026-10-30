@@ -266,8 +266,13 @@ func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint6
 				TaggedTime:                          taggedTimes[a.JobVersion],
 				NewestAllocationLastModifiedSeconds: lastModifiedSeconds(submitTimes[a.JobVersion], now),
 				StatusCounts:                        newStatusCounts(),
+				TaskGroupCounts:                     make(map[string]int),
 			}
 			groups[a.JobVersion] = group
+		}
+
+		if a.ClientStatus == nomadapi.AllocClientStatusRunning {
+			group.TaskGroupCounts[a.TaskGroup]++
 		}
 
 		_, known := group.StatusCounts[a.ClientStatus]
@@ -283,6 +288,25 @@ func groupByVersion(allocs []*nomadapi.AllocationListStub, submitTimes map[uint6
 
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Version > result[j].Version
+	})
+
+	return result
+}
+
+// configuredTaskGroups returns the job's task groups with their configured
+// count (the job spec's Count, not a count of allocations), sorted by name.
+func configuredTaskGroups(job *nomadapi.Job) []taskGroupDTO {
+	result := make([]taskGroupDTO, 0, len(job.TaskGroups))
+	for _, tg := range job.TaskGroups {
+		count := 1 // Nomad's default when Count is unset
+		if tg.Count != nil {
+			count = *tg.Count
+		}
+		result = append(result, taskGroupDTO{Name: stringVal(tg.Name), Count: count})
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
 	})
 
 	return result

@@ -9,6 +9,7 @@ import { DeploymentBadge } from '../components/DeploymentBadge'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { StatusBadge } from '../components/StatusBadge'
+import { TaskGroupChip } from '../components/TaskGroupChip'
 import { VersionLabel } from '../components/VersionLabel'
 import { formatDuration } from '../lib/duration'
 import { statusColor } from '../lib/statusColors'
@@ -353,9 +354,21 @@ export function JobStatusPage() {
     )
   }
 
-  /** Clicking a status count in the Versions section filters the Allocations table to that version+status. */
-  function handleVersionStatusClick(version: number, status: ClientStatus) {
-    const nextFilters: Filters = { ...filters, version: String(version), status }
+  /** Clicking a status count in the Versions section filters the Allocations table to that version+status;
+   * clicking a running task group chip additionally filters to that task group. */
+  function handleVersionStatusClick(version: number, status: ClientStatus, taskGroup = filters.taskGroup) {
+    const nextFilters: Filters = { ...filters, version: String(version), status, taskGroup }
+    setFilters(nextFilters)
+    setPage(1)
+    setSearchParams(
+      buildParams({ search, filters: nextFilters, sort, page: 1, pageSize, versionPage, versionPageSize }),
+      { replace: true },
+    )
+  }
+
+  /** Clicking a version's header filters the Allocations table to that version, clearing status and task group. */
+  function handleVersionClick(version: number) {
+    const nextFilters: Filters = { ...filters, version: String(version), status: '', taskGroup: '' }
     setFilters(nextFilters)
     setPage(1)
     setSearchParams(
@@ -527,7 +540,15 @@ export function JobStatusPage() {
               </div>
               <div className={styles.versionHeader}>
                 <span>
-                  Version <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
+                  <button
+                    type="button"
+                    className={styles.versionButton}
+                    onClick={() => handleVersionClick(group.version)}
+                    title="Filter allocations"
+                  >
+                    Version{' '}
+                    <VersionLabel version={group.version} taggedTime={group.taggedTime} dockerImage={group.dockerImage} />
+                  </button>
                   {group.canary && <CanaryTag />}
                 </span>
                 <span className={styles.lastModified}>
@@ -535,18 +556,35 @@ export function JobStatusPage() {
                 </span>
               </div>
               <div className={styles.statusCounts}>
+                <span>Status:</span>
                 {presentStatuses.map((status) => (
                   <button
                     key={status}
                     type="button"
                     className={styles.statusCount}
                     onClick={() => handleVersionStatusClick(group.version, status)}
-                    title={`Filter allocations to version ${group.version}, ${status}`}
+                    title="Filter allocations"
                   >
-                    <StatusBadge status={status} /> <span className="mono">{group.statusCounts[status]}</span>
+                    <StatusBadge status={status} count={group.statusCounts[status]} />
                   </button>
                 ))}
               </div>
+              {Object.keys(group.taskGroupCounts).length > 0 && (
+                <div className={styles.taskGroupCounts}>
+                  <span>Running task groups:</span>
+                  {Object.entries(group.taskGroupCounts)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([taskGroup, count]) => (
+                      <TaskGroupChip
+                        key={taskGroup}
+                        name={taskGroup}
+                        count={count}
+                        title="Filter allocations"
+                        onClick={() => handleVersionStatusClick(group.version, 'running', taskGroup)}
+                      />
+                    ))}
+                </div>
+              )}
             </div>
           )
         })}
@@ -562,7 +600,23 @@ export function JobStatusPage() {
         />
       )}
 
-      <h2>Allocations</h2>
+      <h2 className={styles.sectionHeading}>Task Groups</h2>
+      {data.taskGroups.length === 0 ? (
+        <p>No task groups configured.</p>
+      ) : (
+        <div className={styles.taskGroupCounts}>
+          {data.taskGroups.map((tg) => (
+            <TaskGroupChip
+              key={tg.name}
+              name={tg.name}
+              count={tg.count}
+              title={`${tg.count} configured in task group ${tg.name}`}
+            />
+          ))}
+        </div>
+      )}
+
+      <h2 className={styles.sectionHeading}>Allocations</h2>
       {noAllocationsAtAll ? (
         <p>No allocations found.</p>
       ) : (
@@ -655,7 +709,9 @@ export function JobStatusPage() {
                       <td>
                         <StatusBadge status={alloc.clientStatus} />
                       </td>
-                      <td>{alloc.taskGroup}</td>
+                      <td>
+                        <TaskGroupChip name={alloc.taskGroup} />
+                      </td>
                       <td>
                         <VersionLabel version={alloc.version} taggedTime={alloc.taggedTime} dockerImage={alloc.dockerImage} />
                         {alloc.canary && <CanaryTag />}

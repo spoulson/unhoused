@@ -58,6 +58,16 @@
   margin-bottom: 0.5rem;
 }
 
+.versionButton {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
 .lastModified {
   font-weight: 400;
   color: var(--gb-fg2);
@@ -66,8 +76,18 @@
 
 .statusCounts {
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
   flex-wrap: wrap;
+}
+
+.taskGroupCounts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
 }
 
 .statusCount {
@@ -80,10 +100,6 @@
   font: inherit;
   padding: 0;
   cursor: pointer;
-}
-
-.statusCount:hover {
-  text-decoration: underline;
 }
 
 .search {
@@ -309,4 +325,11 @@
   padding: 0.3rem 0.5rem;
   font-family: var(--font-text);
   font-size: 0.85rem;
+}
+
+/* Faint separator between the page's sections (the first section, Versions, doesn't need one). */
+.sectionHeading {
+  margin-top: 1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--gb-bg2);
 }

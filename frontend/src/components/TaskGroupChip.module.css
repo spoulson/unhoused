@@ -1,0 +1,32 @@
+.chip {
+  position: relative;
+  --bubble-shift-x: 65%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  /* Same total height as StatusBadge (0.15em vertical padding, line-height 1.5), less the 1px border. */
+  padding: calc(0.15em - 1px) 0.5rem;
+  /* Explicit so a button chip and a span chip are the same height. */
+  line-height: 1.5;
+  border: 1px solid var(--gb-aqua);
+  border-radius: 4px;
+  color: var(--gb-aqua);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+/* Top/right margin leaves room for the count bubble overhanging the corner. */
+.withCount {
+  margin: 0.6rem 1.2rem 0 0;
+}
+
+/* Button reset, so a clickable chip looks the same as a plain one. */
+.clickable {
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.clickable:hover {
+  background: var(--gb-bg1);
+}

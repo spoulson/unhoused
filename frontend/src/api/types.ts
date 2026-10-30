@@ -46,7 +46,13 @@ export interface VersionGroup {
   taggedTime: string
   newestAllocationLastModifiedSeconds: number
   statusCounts: Record<ClientStatus, number>
+  taskGroupCounts: Record<string, number>
   canary: boolean
+}
+
+export interface TaskGroup {
+  name: string
+  count: number
 }
 
 export interface Port {
@@ -88,6 +94,7 @@ export interface FilterOptions {
 export interface JobStatusResponse {
   job: Job
   versionGroups: VersionGroup[]
+  taskGroups: TaskGroup[]
   pagination: Pagination
   filterOptions: FilterOptions
   allocations: Allocation[]

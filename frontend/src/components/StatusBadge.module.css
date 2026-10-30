@@ -1,4 +1,7 @@
 .badge {
+  position: relative;
+  /* The pill-shaped badge has rounded ends, so its count bubble sits closer in than on a task group chip. */
+  --bubble-shift-x: 55%;
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -29,10 +32,6 @@
 
 .red {
   background: var(--gb-red);
-}
-
-.aqua {
-  background: var(--gb-aqua);
 }
 
 .orange {

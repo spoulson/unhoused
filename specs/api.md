@@ -129,9 +129,11 @@ Response `200`:
       "dockerImage": "myrepo/web:1.2.3",
       "taggedTime": "2026-08-01T00:00:00Z",
       "newestAllocationLastModifiedSeconds": 1234,
-      "statusCounts": { "running": 5, "pending": 1, "failed": 0, "complete": 0, "lost": 0 }
+      "statusCounts": { "running": 5, "pending": 1, "failed": 0, "complete": 0, "lost": 0 },
+      "taskGroupCounts": { "web": 4, "worker": 2 }
     }
   ],
+  "taskGroups": [{ "name": "web", "count": 4 }, { "name": "worker", "count": 2 }],
   "pagination": { "page": 1, "pageSize": 50, "totalItems": 137, "totalPages": 3 },
   "filterOptions": { "taskGroups": ["web"], "versions": [3, 2], "nodes": ["node1", "node2"] },
   "allocations": [
@@ -179,6 +181,10 @@ Response `200`:
   (`running`, `pending`, `failed`, `complete`, `lost`). Computed from **all** of the job's allocations,
   unaffected by the filter query parameters above — it represents overall job health, not the filtered
   table view.
+- `versionGroups[].taskGroupCounts` maps task group name to the number of that version's **running**
+  allocations in it (task groups with none running are omitted), computed like `statusCounts`.
+- `taskGroups` lists the job's task groups sorted by name, with `count` being the configured count from the
+  job spec (defaulting to 1 if unset) — not a count of allocations or their statuses.
 - `pagination.page`/`pagination.pageSize` echo the effective values used after applying the defaults/clamps
   above. `totalItems`/`totalPages` are computed from the **filtered** allocation set. If the requested
   `page` is beyond `totalPages` (e.g. a filter change shrank the result set), the response clamps to the

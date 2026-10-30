@@ -90,8 +90,16 @@ its specific fields/columns, and its defaults — this section describes the sha
     `image=` keys, the tagged time, and the image are each syntax-highlighted in a distinct color to keep
     the value readable at a glance (see below wherever this format is reused, except the Version filter
     dropdown, whose native options can only render plain text).
+  - Each version band also lists its running allocation counts by task group (e.g. "Running task groups: web 4  worker 2"), sorted by
+    task group name. The line is omitted when the version has no running allocations.
+  - Clicking a version's "Version <n>" header sets the Allocations table's version filter to that version and
+    clears its status and task group filters.
+  - Clicking a task group chip sets the Allocations table's version, task group, and status (running) filters
+    to that version, task group, and running.
   - Clicking a status count (e.g. "✓ Running 2") sets the Allocations table's version and status filters to
     that version and status, replacing whatever filters were previously set.
+- A "Task Groups" section after Versions lists each task group with its configured count (from the job
+  spec, regardless of allocation status).
 - Below the status groups is the full list of allocations in tabular layout.  This includes
 fields:
   - Allocation ID

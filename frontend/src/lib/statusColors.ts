@@ -1,6 +1,6 @@
 import type { ClientStatus, JobStatus } from '../api/types'
 
-type StatusColorToken = 'green' | 'yellow' | 'gray' | 'red' | 'aqua' | 'orange'
+type StatusColorToken = 'green' | 'yellow' | 'gray' | 'red' | 'orange'
 
 const STATUS_COLORS: Record<JobStatus | ClientStatus, StatusColorToken> = {
   running: 'green',
@@ -8,7 +8,7 @@ const STATUS_COLORS: Record<JobStatus | ClientStatus, StatusColorToken> = {
   stopped: 'gray',
   dead: 'red',
   failed: 'red',
-  complete: 'aqua',
+  complete: 'gray',
   lost: 'orange',
 }
 

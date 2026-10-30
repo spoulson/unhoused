@@ -279,6 +279,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 			DeploymentCanary:          jobDeploymentInfo.Canary,
 		},
 		VersionGroups: versionGroups,
+		TaskGroups:    configuredTaskGroups(job),
 		Pagination:    pagination,
 		FilterOptions: filterOptions,
 		Allocations:   allocations,
