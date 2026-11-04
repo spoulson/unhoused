@@ -1,9 +1,9 @@
-import { CountBubble } from './CountBubble'
+import { BadgeCount } from './BadgeCount'
 import styles from './TaskGroupChip.module.css'
 
 interface Props {
   name: string
-  /** When set, shown as a red bubble on the chip's upper-right corner. */
+  /** When set, shown inline at the end of the chip. */
   count?: number
   title?: string
   /** When set, the chip is rendered as a button. */
@@ -12,12 +12,12 @@ interface Props {
 
 /** A task group name, optionally with its count. */
 export function TaskGroupChip({ name, count, title, onClick }: Props) {
-  const className = `${styles.chip} ${count !== undefined ? styles.withCount : ''} ${onClick ? styles.clickable : ''}`
+  const className = `${styles.chip} ${onClick ? styles.clickable : ''}`
   const content = (
     <>
       <span aria-hidden="true">⊞</span>
       {name}
-      {count !== undefined && <CountBubble count={count} />}
+      {count !== undefined && <BadgeCount count={count} />}
     </>
   )
   return onClick ? (

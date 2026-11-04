@@ -1,7 +1,7 @@
 .badge {
-  position: relative;
-  /* The pill-shaped badge has rounded ends, so its count bubble sits closer in than on a task group chip. */
-  --bubble-shift-x: 55%;
+  /* The inline count pill is the inverse of the badge. */
+  --count-bg: var(--gb-bg0);
+  --count-fg: var(--badge-color);
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -19,21 +19,26 @@
 }
 
 .green {
-  background: var(--gb-green);
+  --badge-color: var(--gb-green);
+  background: var(--badge-color);
 }
 
 .yellow {
-  background: var(--gb-yellow);
+  --badge-color: var(--gb-yellow);
+  background: var(--badge-color);
 }
 
 .gray {
-  background: var(--gb-gray);
+  --badge-color: var(--gb-gray);
+  background: var(--badge-color);
 }
 
 .red {
-  background: var(--gb-red);
+  --badge-color: var(--gb-red);
+  background: var(--badge-color);
 }
 
 .orange {
-  background: var(--gb-orange);
+  --badge-color: var(--gb-orange);
+  background: var(--badge-color);
 }

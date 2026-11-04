@@ -1,6 +1,6 @@
 .chip {
-  position: relative;
-  --bubble-shift-x: 65%;
+  --count-bg: var(--gb-aqua);
+  --count-fg: var(--gb-bg0);
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -13,11 +13,6 @@
   color: var(--gb-aqua);
   font-size: 0.85em;
   font-weight: bold;
-}
-
-/* Top/right margin leaves room for the count bubble overhanging the corner. */
-.withCount {
-  margin: 0.6rem 1.2rem 0 0;
 }
 
 /* Button reset, so a clickable chip looks the same as a plain one. */
