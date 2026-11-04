@@ -8,6 +8,7 @@
   padding: calc(0.15em - 1px) 0.5rem;
   /* Explicit so a button chip and a span chip are the same height. */
   line-height: 1.5;
+  margin: 4px 0;
   border: 1px solid var(--gb-aqua);
   border-radius: 4px;
   color: var(--gb-aqua);

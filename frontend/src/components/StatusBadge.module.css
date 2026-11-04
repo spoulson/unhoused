@@ -6,6 +6,8 @@
   align-items: center;
   gap: 0.35em;
   padding: 0.15em 0.6em;
+  /* Breathing room above and below, so wrapped rows of badges don't touch. */
+  margin: 4px 0;
   border-radius: 999px;
   font-size: 0.85em;
   /* Explicit rather than inherited: when a badge sits inside a flex container (e.g. the Versions
